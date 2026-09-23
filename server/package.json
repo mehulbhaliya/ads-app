@@ -1,0 +1,11 @@
+{
+  "name": "diginerve-openart-proxy",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Server-side OpenArt MCP proxy for DigiNerve Ad Creative Studio",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node index.mjs"
+  }
+}
