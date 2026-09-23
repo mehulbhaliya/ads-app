@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { splitCourseName, confirmedFaculty } from './adContent';
 import { getGeminiApiKey } from '../utils/apiKey';
 import { CampaignBrief, MetaAdCopy } from '../types';
 
@@ -191,44 +192,48 @@ export function getRecommendedCta(type: string): 'SIGN_UP' | 'APPLY_NOW' | 'BOOK
 }
 
 function generateCuratedGroundCopy(brief: CampaignBrief, claims: string[]): MetaAdCopy[] {
-  const claim1 = claims[0] || 'Jaypee medical publisher heritage';
-  const claim2 = claims[1] || 'high-yield clinical revision';
-  const courseShort = brief.product;
+  const claim1 = claims[0] || 'Content from Jaypee Brothers Medical Publishers';
+  const claim2 = claims[1] || 'high-yield, exam-aligned revision';
+  // Human course name ("OBGYN MD"), never the internal product code.
+  const courseShort = splitCourseName(brief.course?.courseName || brief.product)[0].replace(/^Cracking\s+/i, '');
+  const lead = confirmedFaculty(brief.course)[0]?.name;
 
   const concepts: { name: string; pt: string; hl: string; desc: string; cta: any }[] = [
     {
       name: 'Faculty & Rigour',
-      pt: `Taught by senior clinicians. ${claim1}. Clear your ${courseShort} exam with focused case revision.`,
-      hl: `${courseShort} Clinical Residency`,
-      desc: 'Jaypee Medical Prep',
+      pt: lead
+        ? `Learn ${courseShort} from ${lead}. ${claim1}. Structured, exam-aligned revision.`
+        : `Learn ${courseShort} from specialists who teach it daily. ${claim1}. Structured revision.`,
+      hl: `${courseShort}: Learn From Specialists`,
+      desc: 'Backed by Jaypee',
       cta: getRecommendedCta(brief.type),
     },
     {
-      name: 'High-Yield Clinical',
-      pt: `Built for busy residents: ${claim1} and ${claim2}. Zero syllabus bloat, pure clinical yield.`,
+      name: 'High-Yield Focus',
+      pt: `Built for busy residents: ${claim1} and ${claim2}. Finishable, not exhaustive.`,
       hl: `High-Yield ${courseShort} Prep`,
-      desc: 'Start Revision Now',
+      desc: 'Start your revision',
       cta: getRecommendedCta(brief.type),
     },
     {
       name: 'Factual Proof',
-      pt: `Structured for MD/MS candidates. Features ${claim1}. Tested against university exam patterns.`,
-      hl: `Master ${courseShort} Clinicals`,
-      desc: 'Verified Curriculum',
+      pt: `${claim1}. ${claim2}. Every topic mapped to real exam patterns.`,
+      hl: `${courseShort}, Mapped to the Exam`,
+      desc: 'See the curriculum',
       cta: getRecommendedCta(brief.type),
     },
     {
       name: 'Exam Readiness',
-      pt: `Tired of endless question walls? Focus on ${claim2} with verified diagnostic decision pathways.`,
+      pt: `Tired of endless question banks? Focus on ${claim2} with clear diagnosis-to-treatment pathways.`,
       hl: `Exam-Ready ${courseShort}`,
-      desc: 'Explore Curriculum',
+      desc: 'Revise with a plan',
       cta: getRecommendedCta(brief.type),
     },
     {
-      name: 'Value & Pedigree',
-      pt: `55+ years of Jaypee publishing authority. Complete ${courseShort} coverage at half the alternative price.`,
+      name: 'Publisher Pedigree',
+      pt: `From Jaypee Brothers Medical Publishers, now as a ${courseShort} course. ${claim1}.`,
       hl: `${courseShort} by DigiNerve`,
-      desc: 'View Plans & Demo',
+      desc: 'View plans and demo',
       cta: getRecommendedCta(brief.type),
     },
   ];

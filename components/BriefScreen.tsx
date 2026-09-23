@@ -113,10 +113,10 @@ export const BriefScreen: React.FC<BriefScreenProps> = ({
               <span className="text-xs text-gray-300">Jaypee Medical Education</span>
             </div>
             <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
-              DigiNerve Campaign Brief Studio
+              Start with the brief
             </h1>
             <p className="text-sm text-gray-300 mt-1 max-w-2xl">
-              Construct a launch-ready Meta ad package: AI visual bases with negative space, composited brand text layers, course-grounded copy, and compliant taxonomy.
+              Pick the course, angle and offer. You get 3 finished ads in proven DigiNerve layouts (logo, headline, faculty, approved proof, CTA), plus Meta copy and compliant names, ready to export for Meta and Google.
             </p>
           </div>
 
@@ -127,7 +127,7 @@ export const BriefScreen: React.FC<BriefScreenProps> = ({
               title="View & copy prompt for external MCP tools"
             >
               <Layers className="w-4 h-4 text-dn-gold" />
-              <span>MCP Tool Prompt</span>
+              <span>OpenArt Prompt</span>
             </button>
             <button
               onClick={onStartGenerating}

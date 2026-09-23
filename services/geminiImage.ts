@@ -14,6 +14,31 @@ import { SAFE_ZONES } from '../constants/brand';
 import { buildFeedbackBlocksForPrompt, getNextVersionNumber } from './learning';
 import { getDefaultLayers } from './compositor';
 import { buildAdName } from './naming';
+import { TemplateId } from './adContent';
+
+/** What the AI visual must look like for each finished-ad layout slot. */
+const SLOT_COMPOSITION: Record<TemplateId, { label: string; prompt: string }> = {
+  'faculty-hero': {
+    label: 'Faculty Hero: portrait slot',
+    prompt:
+      'ONE clinician-educator, head and shoulders, centred in frame, calm direct eye contact, plain softly lit pale clinical background. The image will be cropped into a circle on the right of a navy ad, so keep the face in the central 60% and nothing important near the edges.',
+  },
+  'product-light': {
+    label: 'Product Showcase: study-scene band',
+    prompt:
+      'A bright, wide study scene on a clean white desk: an open medical textbook with blank pages, a tablet with an abstract blurred lecture screen, a stethoscope, soft white-blue daylight. Keep the top third empty pale background; it will be faded into the ad above it.',
+  },
+  'hook-fullbleed': {
+    label: 'Full-bleed Hook: cinematic scene',
+    prompt:
+      'A cinematic environmental shot of a focused young doctor studying or on a ward round. Subject in the upper half of the frame; the lower half darker, low-detail and quiet because a navy gradient and headline will cover it.',
+  },
+  'offer-stack': {
+    label: 'Offer & Price: circular crop',
+    prompt:
+      'A clean, centred close portrait of a confident Indian doctor (or a premium still life of a medical textbook and stethoscope), simple background, suitable for a small circular crop.',
+  },
+};
 
 export interface PromptAssemblyResult {
   fullPromptText: string;
@@ -104,9 +129,11 @@ export async function generateCreativeVariants(
   brief: CampaignBrief,
   count: 3 | 6 = 3,
   masterRatio: MasterRatio = '3:4',
-  onProgress?: (index: number, total: number, status: string) => void
+  onProgress?: (index: number, total: number, status: string) => void,
+  templates?: TemplateId[]
 ): Promise<GeneratedCreative[]> {
-  const variantAxes = [
+  const slots = templates?.slice(0, count).map((t) => SLOT_COMPOSITION[t]);
+  const variantAxes = slots ? slots.map((s) => s.label) : [
     'Baseline Brief (Direct Specification)',
     'Alternative Environmental Context (Hospital Corridor & Case Discussion Setting)',
     'Compositional Shift (Subject Left / Quiet Copy Zone Right)',
@@ -122,7 +149,7 @@ export async function generateCreativeVariants(
     const axis = variantAxes[i];
     onProgress?.(i + 1, count, `Assembling prompt for Variant ${i + 1}: ${axis}`);
 
-    const assembly = assembleImagePrompt(brief, masterRatio, axis);
+    const assembly = assembleImagePrompt(brief, masterRatio, slots ? `${axis}. ${slots[i].prompt}` : axis);
     let base64Image = '';
 
     let generationError = '';

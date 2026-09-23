@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  CampaignBrief,
-  GeneratedCreative,
-  Ratio,
-  MasterRatio,
-  MetaAdCopy,
-  LearningStore,
-} from './types';
+import { CampaignBrief, GeneratedCreative, MasterRatio, MetaAdCopy, LearningStore } from './types';
 import { COURSE_FACTS } from './constants/courseFacts';
 import { Angle } from './types';
 import { generateCreativeVariants } from './services/geminiImage';
@@ -19,9 +12,9 @@ import {
   recordFeedback,
   initStorage,
 } from './services/learning';
+import { AdContent, TemplateId, TEMPLATE_META, buildDefaultContent, defaultTemplateForAngle } from './services/adContent';
 import { BriefScreen } from './components/BriefScreen';
-import { CreativeCanvas } from './components/CreativeCanvas';
-import { LayerPanel } from './components/LayerPanel';
+import { AdStudio } from './components/AdStudio';
 import { VariantGrid } from './components/VariantGrid';
 import { CopyPanel } from './components/CopyPanel';
 import { NamingPanel } from './components/NamingPanel';
@@ -29,18 +22,12 @@ import { PerformanceImport } from './components/PerformanceImport';
 import { LearningLibraryView } from './components/LearningLibraryView';
 import { McpPromptBridge } from './components/McpPromptBridge';
 import { FeedbackModal } from './components/FeedbackModal';
-import {
-  Sparkles,
-  Layers,
-  FileText,
-  Tag,
-  Award,
-  TrendingUp,
-  Layout,
-  ExternalLink,
-} from 'lucide-react';
+import { getGeminiApiKey } from './utils/apiKey';
+import { Sparkles, Palette, FileText, Tag, Award, ClipboardList, Check, ArrowRight } from 'lucide-react';
 
 type StudioTab = 'brief' | 'canvas' | 'copy' | 'naming' | 'learning';
+
+const LOGO_STORAGE_KEY = 'diginerve_custom_logo_v1';
 
 const INITIAL_BRIEF: CampaignBrief = {
   brand: 'DN',
@@ -61,12 +48,32 @@ const INITIAL_BRIEF: CampaignBrief = {
   userNotes: '',
 };
 
+/** Variant 1 uses the layout that fits the angle; variants 2+ try other proven layouts. */
+function templatesForVariants(angle: Angle, count: number): TemplateId[] {
+  const first = defaultTemplateForAngle(angle);
+  const rest = (Object.keys(TEMPLATE_META) as TemplateId[]).filter((t) => t !== first);
+  return Array.from({ length: count }, (_, i) => [first, ...rest][i % 4]);
+}
+
+const STEPS: { id: StudioTab; label: string; icon: React.ReactNode }[] = [
+  { id: 'brief', label: 'Brief', icon: <ClipboardList className="w-3.5 h-3.5" /> },
+  { id: 'canvas', label: 'Design & Export', icon: <Palette className="w-3.5 h-3.5" /> },
+  { id: 'copy', label: 'Meta Copy', icon: <FileText className="w-3.5 h-3.5" /> },
+  { id: 'naming', label: 'Names & UTMs', icon: <Tag className="w-3.5 h-3.5" /> },
+  { id: 'learning', label: 'Learning Loop', icon: <Award className="w-3.5 h-3.5" /> },
+];
+
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<StudioTab>('brief');
   const [brief, setBrief] = useState<CampaignBrief>(INITIAL_BRIEF);
   const [masterRatio, setMasterRatio] = useState<MasterRatio>('3:4');
-  const [selectedRatio, setSelectedRatio] = useState<Ratio>('4:5');
-  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+  const [logoSrc, setLogoSrc] = useState<string | undefined>(() => {
+    try {
+      return localStorage.getItem(LOGO_STORAGE_KEY) || undefined;
+    } catch {
+      return undefined;
+    }
+  });
 
   // Creatives & Variants
   const [creatives, setCreatives] = useState<GeneratedCreative[]>([]);
@@ -88,56 +95,69 @@ export const App: React.FC = () => {
   const [feedbackTargetId, setFeedbackTargetId] = useState<string | null>(null);
   const [feedbackRating, setFeedbackRating] = useState<'good' | 'bad' | null>(null);
 
-  // Load persisted state on mount
+  // Load persisted state on mount. No auto-generation: each image costs quota.
   useEffect(() => {
     const savedCreatives = loadCreatives();
-    // No auto-generation on first load: each image costs Gemini quota, so wait
-    // until the user has filled the brief and clicks Generate.
     if (savedCreatives.length > 0) {
       setCreatives(savedCreatives);
       setActiveCreativeId(savedCreatives[0].id);
     }
-
-    // Hydrate from high-capacity IndexedDB for complete assets
     initStorage((syncedCreatives, syncedStore) => {
       if (syncedCreatives.length > 0) {
         setCreatives(syncedCreatives);
-        setActiveCreativeId((prev) =>
-          prev && syncedCreatives.some((c) => c.id === prev) ? prev : syncedCreatives[0].id
-        );
+        setActiveCreativeId((prev) => (prev && syncedCreatives.some((c) => c.id === prev) ? prev : syncedCreatives[0].id));
       }
-      if (syncedStore) {
-        setLearningStore(syncedStore);
-      }
+      if (syncedStore) setLearningStore(syncedStore);
     });
   }, []);
 
   const activeCreative = creatives.find((c) => c.id === activeCreativeId) || creatives[0];
+  const hasGeminiKey = Boolean(getGeminiApiKey());
+
+  // Fill the copy tab on first visit so it is never an empty screen.
+  useEffect(() => {
+    if (activeTab === 'copy' && copyOptions.length === 0 && !isLoadingCopy) handleGenerateCopy();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+  const activeBrief = activeCreative?.brief || brief;
+  const activeContent: AdContent | undefined = activeCreative
+    ? activeCreative.content || buildDefaultContent(activeCreative.brief)
+    : undefined;
+
+  const updateCreative = (id: string, patch: Partial<GeneratedCreative>) => {
+    setCreatives((prev) => {
+      const next = prev.map((c) => (c.id === id ? { ...c, ...patch } : c));
+      saveCreatives(next);
+      return next;
+    });
+  };
 
   const handleGenerateVariants = async () => {
     setIsGenerating(true);
     setGenerationError('');
-    setGenerationStatus('Synthesizing brief and assembling prompt scaffold...');
+    setGenerationStatus('Assembling the brand prompt scaffold...');
     try {
+      const templates = templatesForVariants(brief.angle, 3);
       const generated = await generateCreativeVariants(
         brief,
         3,
         masterRatio,
-        (curr, tot, msg) => setGenerationStatus(`[${curr}/${tot}] ${msg}`)
+        (curr, tot, msg) => setGenerationStatus(`[${curr}/${tot}] ${msg}`),
+        templates
       );
-      setCreatives(generated);
-      const failed = generated.filter((c) => c.generationError);
+      const withContent = generated.map((c, i) => ({ ...c, content: buildDefaultContent(brief, templates[i]) }));
+      setCreatives(withContent);
+      const failed = withContent.filter((c) => c.generationError);
       if (failed.length > 0) {
         setGenerationError(
-          `${failed.length} of ${generated.length} images fell back to a placeholder. Reason: ${failed[0].generationError}`
+          `${failed.length} of ${withContent.length} AI visuals could not be generated, so a neutral placeholder photo is used. Reason: ${failed[0].generationError}`
         );
       }
-      if (generated.length > 0) {
-        setActiveCreativeId(generated[0].id);
-        saveCreatives(generated);
+      if (withContent.length > 0) {
+        setActiveCreativeId(withContent[0].id);
+        saveCreatives(withContent);
       }
-      // Also generate initial copy options for the brief
-      handleGenerateCopy();
+      handleGenerateCopy(brief);
       setActiveTab('canvas');
     } catch (e: any) {
       console.error('Variant generation encountered an error:', e);
@@ -148,11 +168,10 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleGenerateCopy = async () => {
+  const handleGenerateCopy = async (forBrief?: CampaignBrief) => {
     setIsLoadingCopy(true);
     try {
-      const copies = await generateMetaCopy(brief);
-      setCopyOptions(copies);
+      setCopyOptions(await generateMetaCopy(forBrief || activeCreative?.brief || brief));
     } catch (e) {
       console.error('Failed to generate copy:', e);
     } finally {
@@ -160,24 +179,24 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleUpdateActiveLayers = (updatedLayers: any[]) => {
-    if (!activeCreative) return;
-    const updated = creatives.map((c) =>
-      c.id === activeCreative.id ? { ...c, layers: updatedLayers } : c
-    );
-    setCreatives(updated);
-    saveCreatives(updated);
+  const handleChangeContent = (content: AdContent) => {
+    if (activeCreative) updateCreative(activeCreative.id, { content });
   };
 
   const handlePushToCanvas = (headline: string, subhead: string) => {
-    if (!activeCreative) return;
-    const newLayers = activeCreative.layers.map((l) => {
-      if (l.role === 'headline') return { ...l, content: headline };
-      if (l.role === 'subhead') return { ...l, content: subhead };
-      return l;
-    });
-    handleUpdateActiveLayers(newLayers);
+    if (!activeCreative || !activeContent) return;
+    handleChangeContent({ ...activeContent, hook: headline, hookAccent: '', tagline: subhead || activeContent.tagline });
     setActiveTab('canvas');
+  };
+
+  const handleChangeLogo = (dataUrl: string | undefined) => {
+    setLogoSrc(dataUrl);
+    try {
+      if (dataUrl) localStorage.setItem(LOGO_STORAGE_KEY, dataUrl);
+      else localStorage.removeItem(LOGO_STORAGE_KEY);
+    } catch {
+      // Too large for localStorage: keep for this session only.
+    }
   };
 
   const handleOpenFeedback = (id: string, rating: 'good' | 'bad') => {
@@ -190,115 +209,79 @@ export const App: React.FC = () => {
     if (!feedbackTargetId || !feedbackRating) return;
     const { updatedCreative, store } = recordFeedback(feedbackTargetId, feedbackRating, notes);
     if (updatedCreative) {
-      setCreatives((prev) => prev.map((c) => (c.id === updatedCreative.id ? updatedCreative : c)));
+      setCreatives((prev) => prev.map((c) => (c.id === updatedCreative.id ? { ...c, ...updatedCreative, content: c.content, facultyPhoto: c.facultyPhoto } : c)));
     }
     setLearningStore(store);
   };
 
-  const handleImportMcpImage = (base64Image: string) => {
-    if (!activeCreative) return;
-    const updated = creatives.map((c) =>
-      c.id === activeCreative.id ? { ...c, base64: base64Image } : c
-    );
-    setCreatives(updated);
-    saveCreatives(updated);
+  const handleImportMcpImage = (image: string) => {
+    if (activeCreative) updateCreative(activeCreative.id, { base64: image, generationError: undefined });
   };
+
+  const stepDone = (id: StudioTab) => (id === 'brief' ? creatives.length > 0 : false);
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 font-sans flex flex-col">
-      {/* Primary Top Header */}
-      <header className="sticky top-0 z-40 bg-dn-navy-deep/95 backdrop-blur-md border-b border-gray-800 px-4 lg:px-8 py-3">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          {/* Brand Wordmark & Tagline */}
+      <header className="sticky top-0 z-40 bg-dn-navy-deep/95 backdrop-blur-md border-b border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6 py-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex items-center text-xl font-black tracking-tight">
-              <span className="text-white">Digi</span>
-              <span className="text-dn-gold">Nerve</span>
+            <div className="text-xl font-black tracking-tight leading-none">
+              <span className="text-white">digi</span>
+              <span className="text-dn-gold">nerve</span>
             </div>
-            <div className="hidden sm:block h-4 w-px bg-gray-700" />
-            <span className="text-xs text-gray-300 font-medium hidden sm:inline">
-              Ad Creative Studio <span className="text-[10px] text-dn-gold font-mono px-1 rounded bg-black/40">v2.0</span>
-            </span>
+            <div className="h-5 w-px bg-gray-700" />
+            <div className="leading-tight">
+              <div className="text-sm font-semibold text-white">Ad Creative Studio</div>
+              <div className="text-[10px] text-gray-400">Brief → on-brand ads → Meta & Google ready</div>
+            </div>
           </div>
 
-          {/* Navigation Flow Tabs */}
-          <nav className="flex items-center gap-1 bg-gray-900/90 p-1 rounded-xl border border-gray-800 text-xs overflow-x-auto">
-            <button
-              onClick={() => setActiveTab('brief')}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition ${
-                activeTab === 'brief'
-                  ? 'bg-dn-navy text-dn-gold border border-dn-gold/40 shadow-sm'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              <Layout className="w-3.5 h-3.5" />
-              <span>1. Brief</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('canvas')}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition ${
-                activeTab === 'canvas'
-                  ? 'bg-dn-navy text-dn-gold border border-dn-gold/40 shadow-sm'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>2. Studio Canvas</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('copy')}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition ${
-                activeTab === 'copy'
-                  ? 'bg-dn-navy text-dn-gold border border-dn-gold/40 shadow-sm'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              <span>3. Meta Copy</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('naming')}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition ${
-                activeTab === 'naming'
-                  ? 'bg-dn-navy text-dn-gold border border-dn-gold/40 shadow-sm'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              <Tag className="w-3.5 h-3.5" />
-              <span>4. Naming & URLs</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('learning')}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition ${
-                activeTab === 'learning'
-                  ? 'bg-dn-navy text-dn-gold border border-dn-gold/40 shadow-sm'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              <Award className="w-3.5 h-3.5" />
-              <span>5. Learning Loop</span>
-            </button>
+          <div className="flex items-center gap-3 min-w-0">
+          <span
+            className={`hidden md:inline-flex flex-shrink-0 items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-semibold border ${
+              hasGeminiKey ? 'border-green-800 bg-green-950/60 text-green-300' : 'border-amber-800 bg-amber-950/60 text-amber-300'
+            }`}
+            title={hasGeminiKey ? 'AI visuals and copy run on Gemini' : 'Add GEMINI_API_KEY to .env.local (or run in Google AI Studio) for AI visuals and copy'}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${hasGeminiKey ? 'bg-green-400' : 'bg-amber-400'}`} />
+            {hasGeminiKey ? 'Gemini connected' : 'Gemini key missing'}
+          </span>
+          <nav className="flex items-center gap-1 overflow-x-auto -mx-1 px-1" aria-label="Workflow steps">
+            {STEPS.map((s, i) => {
+              const active = activeTab === s.id;
+              const disabled = s.id !== 'brief' && s.id !== 'learning' && creatives.length === 0;
+              return (
+                <React.Fragment key={s.id}>
+                  {i > 0 && <ArrowRight className="w-3 h-3 text-gray-700 flex-shrink-0" />}
+                  <button
+                    onClick={() => !disabled && setActiveTab(s.id)}
+                    disabled={disabled}
+                    title={disabled ? 'Generate creatives from the brief first' : undefined}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition border ${
+                      active
+                        ? 'bg-dn-gold text-dn-navy-deep border-dn-gold'
+                        : disabled
+                        ? 'text-gray-600 border-transparent cursor-not-allowed'
+                        : 'text-gray-300 border-gray-800 hover:border-gray-600 hover:text-white'
+                    }`}
+                  >
+                    <span
+                      className={`w-4 h-4 rounded-full text-[9px] flex items-center justify-center ${
+                        active ? 'bg-dn-navy-deep text-dn-gold' : stepDone(s.id) ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400'
+                      }`}
+                    >
+                      {stepDone(s.id) && !active ? <Check className="w-2.5 h-2.5" /> : i + 1}
+                    </span>
+                    {s.label}
+                  </button>
+                </React.Fragment>
+              );
+            })}
           </nav>
-
-          {/* Quick MCP Bridge trigger */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setMcpModalOpen(true)}
-              className="px-3 py-1.5 text-xs font-semibold bg-purple-950/40 hover:bg-purple-900/60 text-purple-200 border border-purple-600/60 rounded-lg flex items-center gap-1.5 transition shadow-sm"
-              title="Open direct OpenArt MCP Server bridge (https://mcp.openart.ai/mcp)"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-dn-gold" />
-              <span className="hidden md:inline">OpenArt MCP</span>
-            </button>
           </div>
         </div>
       </header>
 
-      {/* Generation Progress Bar */}
       {isGenerating && (
         <div className="bg-dn-navy text-dn-gold px-4 py-2 text-xs font-semibold flex items-center justify-center gap-2 border-b border-dn-gold/30">
           <span className="w-3 h-3 rounded-full border-2 border-dn-gold border-t-transparent animate-spin" />
@@ -307,15 +290,14 @@ export const App: React.FC = () => {
       )}
 
       {generationError && !isGenerating && (
-        <div className="bg-red-950/80 text-red-200 px-4 py-2 text-xs flex items-center justify-center gap-3 border-b border-red-800">
+        <div className="bg-amber-950/80 text-amber-100 px-4 py-2 text-xs flex items-center justify-center gap-3 border-b border-amber-800">
           <span>{generationError}</span>
-          <button onClick={() => setGenerationError('')} className="underline text-red-300 hover:text-white">
+          <button onClick={() => setGenerationError('')} className="underline text-amber-300 hover:text-white flex-shrink-0">
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Main View Area */}
       <main className="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-6">
         {activeTab === 'brief' && (
           <BriefScreen
@@ -331,49 +313,37 @@ export const App: React.FC = () => {
 
         {activeTab === 'canvas' && (
           <div className="space-y-6">
-            {/* Variant Grid Selector (One Axis Fan-Out) */}
             {creatives.length > 0 && (
               <VariantGrid
                 variants={creatives}
-                activeVariantId={activeCreativeId}
+                activeVariantId={activeCreative?.id || ''}
                 onSelectVariant={setActiveCreativeId}
                 onRateVariant={handleOpenFeedback}
+                logoSrc={logoSrc}
               />
             )}
-
-            {/* Canvas & Layer Inspector 2-Column Split */}
-            {activeCreative ? (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                <div className="lg:col-span-7">
-                  <CreativeCanvas
-                    creative={activeCreative}
-                    selectedRatio={selectedRatio}
-                    onChangeRatio={setSelectedRatio}
-                    selectedLayerId={selectedLayerId}
-                    onSelectLayer={setSelectedLayerId}
-                    onUpdateLayers={handleUpdateActiveLayers}
-                    onOpenMcpBridge={() => setMcpModalOpen(true)}
-                  />
-                </div>
-
-                <div className="lg:col-span-5">
-                  <LayerPanel
-                    layers={activeCreative.layers}
-                    onChangeLayers={handleUpdateActiveLayers}
-                    selectedLayerId={selectedLayerId}
-                    onSelectLayer={setSelectedLayerId}
-                    course={brief.course}
-                  />
-                </div>
-              </div>
+            {activeCreative && activeContent ? (
+              <AdStudio
+                creative={activeCreative}
+                brief={activeBrief}
+                content={activeContent}
+                onChangeContent={handleChangeContent}
+                onChangeFacultyPhoto={(photo) => updateCreative(activeCreative.id, { facultyPhoto: photo })}
+                logoSrc={logoSrc}
+                onChangeLogo={handleChangeLogo}
+                onRegenerate={handleGenerateVariants}
+                onOpenOpenArt={() => setMcpModalOpen(true)}
+                isGenerating={isGenerating}
+              />
             ) : (
-              <div className="text-center py-16 text-gray-400">
-                <p>No creatives generated yet.</p>
+              <div className="text-center py-20 text-gray-400 border border-dashed border-gray-800 rounded-2xl">
+                <Sparkles className="w-8 h-8 text-dn-gold mx-auto mb-3" />
+                <p className="text-sm">No creatives yet. Fill in the brief, then generate.</p>
                 <button
-                  onClick={handleGenerateVariants}
-                  className="mt-3 px-4 py-2 bg-dn-gold text-dn-navy-deep font-bold rounded-lg text-xs"
+                  onClick={() => setActiveTab('brief')}
+                  className="mt-4 px-4 py-2 bg-dn-gold text-dn-navy-deep font-bold rounded-lg text-xs"
                 >
-                  Generate First Variants
+                  Go to the brief
                 </button>
               </div>
             )}
@@ -382,23 +352,19 @@ export const App: React.FC = () => {
 
         {activeTab === 'copy' && (
           <CopyPanel
-            brief={brief}
+            brief={activeBrief}
             copyOptions={copyOptions}
-            onGenerateCopy={handleGenerateCopy}
+            onGenerateCopy={() => handleGenerateCopy()}
             isLoading={isLoadingCopy}
             onPushToCanvas={handlePushToCanvas}
           />
         )}
 
-        {activeTab === 'naming' && (
-          <NamingPanel brief={brief} versionNum={activeCreative?.version || 1} />
-        )}
+        {activeTab === 'naming' && <NamingPanel brief={activeBrief} versionNum={activeCreative?.version || 1} />}
 
         {activeTab === 'learning' && (
           <div className="space-y-8">
-            <PerformanceImport
-              onRefreshCreatives={() => setCreatives(loadCreatives())}
-            />
+            <PerformanceImport onRefreshCreatives={() => setCreatives(loadCreatives())} />
             <LearningLibraryView
               store={learningStore}
               onUpdateStore={(updated) => {
@@ -410,9 +376,8 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Modals */}
       <McpPromptBridge
-        brief={brief}
+        brief={activeBrief}
         masterRatio={masterRatio}
         isOpen={mcpModalOpen}
         onClose={() => setMcpModalOpen(false)}

@@ -1,3 +1,5 @@
+import type { AdContent } from './services/adContent';
+
 export enum Angle {
   Faculty = 'FACULTY',
   Result = 'RESULT',
@@ -141,6 +143,8 @@ export interface GeneratedCreative {
   performance?: AdPerformance;
   createdAt: string;
   generationError?: string;
+  content?: AdContent; // finished-ad text + template (Ad Studio)
+  facultyPhoto?: string; // real faculty photo data URL for this creative
 }
 
 export interface AdPerformance {

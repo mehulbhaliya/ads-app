@@ -1,5 +1,7 @@
 import React from 'react';
 import { GeneratedCreative } from '../types';
+import { AdPreview } from './AdPreview';
+import { buildDefaultContent, TEMPLATE_META } from '../services/adContent';
 import { ThumbsUp, ThumbsDown, CheckCircle2, Award, TrendingUp, Sparkles } from 'lucide-react';
 
 interface VariantGridProps {
@@ -7,6 +9,7 @@ interface VariantGridProps {
   activeVariantId: string;
   onSelectVariant: (id: string) => void;
   onRateVariant: (id: string, rating: 'good' | 'bad') => void;
+  logoSrc?: string | null;
 }
 
 export const VariantGrid: React.FC<VariantGridProps> = ({
@@ -14,13 +17,14 @@ export const VariantGrid: React.FC<VariantGridProps> = ({
   activeVariantId,
   onSelectVariant,
   onRateVariant,
+  logoSrc,
 }) => {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-white flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-dn-gold" />
-          Creative Variants (One-Axis Fan-Out)
+          Your variants: pick one to edit
         </h3>
         <span className="text-xs text-gray-400 font-mono">
           {variants.length} Generated Variants
@@ -36,7 +40,7 @@ export const VariantGrid: React.FC<VariantGridProps> = ({
             <div
               key={v.id}
               onClick={() => onSelectVariant(v.id)}
-              className={`group bg-gray-900/90 rounded-xl border p-3 cursor-pointer transition-all hover:shadow-xl relative flex flex-col justify-between ${
+              className={`group min-w-0 bg-gray-900/90 rounded-xl border p-3 cursor-pointer transition-all hover:shadow-xl relative flex flex-col justify-between ${
                 isActive
                   ? 'border-dn-gold ring-2 ring-dn-gold/40 shadow-dn-gold/10'
                   : 'border-gray-800 hover:border-gray-600'
@@ -44,17 +48,19 @@ export const VariantGrid: React.FC<VariantGridProps> = ({
             >
               <div>
                 {/* Visual Thumbnail */}
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-black/60 mb-2.5">
-                  <img
-                    src={v.base64}
-                    alt={v.variantAxis}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                <div className="relative rounded-lg overflow-hidden bg-black/60 mb-2.5">
+                  <AdPreview
+                    content={v.content || buildDefaultContent(v.brief)}
+                    ratio="4:5"
+                    baseSrc={v.generationError ? null : v.base64}
+                    facultySrc={v.facultyPhoto || v.brief.references?.find((r) => r.role === 'brandLock')?.base64}
+                    logoSrc={logoSrc}
                   />
 
                   {/* Active Indicator */}
                   {isActive && (
                     <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-dn-gold text-dn-navy-deep font-bold text-[10px] shadow">
-                      ACTIVE CANVAS
+                      EDITING
                     </div>
                   )}
 
@@ -88,8 +94,8 @@ export const VariantGrid: React.FC<VariantGridProps> = ({
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-white">Variant {idx + 1}</span>
-                    <span className="text-[10px] text-gray-400 font-mono">
-                      {v.brief.angle}
+                    <span className="text-[10px] text-dn-gold font-semibold">
+                      {TEMPLATE_META[(v.content || buildDefaultContent(v.brief)).template].name}
                     </span>
                   </div>
                   <p className="text-[11px] text-gray-300 font-medium line-clamp-2">
@@ -117,7 +123,7 @@ export const VariantGrid: React.FC<VariantGridProps> = ({
 
               {/* Learning Loop Feedback Controls */}
               <div className="mt-3 pt-2 border-t border-gray-800 flex items-center justify-between">
-                <span className="text-[10px] text-gray-400">Feedback Loop:</span>
+                <span className="text-[10px] text-gray-400">Rate to teach the next batch</span>
                 <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
