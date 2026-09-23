@@ -140,6 +140,7 @@ export interface GeneratedCreative {
   feedbackNotes?: string;
   performance?: AdPerformance;
   createdAt: string;
+  generationError?: string;
 }
 
 export interface AdPerformance {

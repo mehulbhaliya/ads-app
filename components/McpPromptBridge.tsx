@@ -40,9 +40,6 @@ export const McpPromptBridge: React.FC<McpPromptBridgeProps> = ({
   onClose,
   onImportGeneratedImage,
 }) => {
-  if (!isOpen) return null;
-
-  const assembly = assembleImagePrompt(brief, masterRatio);
   const [copied, setCopied] = useState(false);
   const [importUrl, setImportUrl] = useState('');
   const [importError, setImportError] = useState('');
@@ -58,6 +55,10 @@ export const McpPromptBridge: React.FC<McpPromptBridgeProps> = ({
   useEffect(() => {
     setOpenArtConfig(loadOpenArtConfig());
   }, []);
+
+  if (!isOpen) return null;
+
+  const assembly = assembleImagePrompt(brief, masterRatio);
 
   const handleCopyPrompt = () => {
     navigator.clipboard.writeText(assembly.fullPromptText);
@@ -133,8 +134,8 @@ export const McpPromptBridge: React.FC<McpPromptBridgeProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-white">OpenArt MCP Server Integration</h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-green-950 text-green-300 border border-green-700">
-                  CONNECTED
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-700">
+                  NEEDS BACKEND PROXY
                 </span>
               </div>
               <p className="text-xs text-gray-300">

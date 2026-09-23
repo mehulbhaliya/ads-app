@@ -73,6 +73,7 @@ export const App: React.FC = () => {
   const [activeCreativeId, setActiveCreativeId] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState<string>('');
+  const [generationError, setGenerationError] = useState<string>('');
 
   // Copy Options
   const [copyOptions, setCopyOptions] = useState<MetaAdCopy[]>([]);
@@ -90,12 +91,11 @@ export const App: React.FC = () => {
   // Load persisted state on mount
   useEffect(() => {
     const savedCreatives = loadCreatives();
+    // No auto-generation on first load: each image costs Gemini quota, so wait
+    // until the user has filled the brief and clicks Generate.
     if (savedCreatives.length > 0) {
       setCreatives(savedCreatives);
       setActiveCreativeId(savedCreatives[0].id);
-    } else {
-      // Generate initial variants
-      handleGenerateVariants();
     }
 
     // Hydrate from high-capacity IndexedDB for complete assets
@@ -116,6 +116,7 @@ export const App: React.FC = () => {
 
   const handleGenerateVariants = async () => {
     setIsGenerating(true);
+    setGenerationError('');
     setGenerationStatus('Synthesizing brief and assembling prompt scaffold...');
     try {
       const generated = await generateCreativeVariants(
@@ -125,6 +126,12 @@ export const App: React.FC = () => {
         (curr, tot, msg) => setGenerationStatus(`[${curr}/${tot}] ${msg}`)
       );
       setCreatives(generated);
+      const failed = generated.filter((c) => c.generationError);
+      if (failed.length > 0) {
+        setGenerationError(
+          `${failed.length} of ${generated.length} images fell back to a placeholder. Reason: ${failed[0].generationError}`
+        );
+      }
       if (generated.length > 0) {
         setActiveCreativeId(generated[0].id);
         saveCreatives(generated);
@@ -132,8 +139,9 @@ export const App: React.FC = () => {
       // Also generate initial copy options for the brief
       handleGenerateCopy();
       setActiveTab('canvas');
-    } catch (e) {
+    } catch (e: any) {
       console.error('Variant generation encountered an error:', e);
+      setGenerationError(e?.message || 'Variant generation failed.');
     } finally {
       setIsGenerating(false);
       setGenerationStatus('');
@@ -295,6 +303,15 @@ export const App: React.FC = () => {
         <div className="bg-dn-navy text-dn-gold px-4 py-2 text-xs font-semibold flex items-center justify-center gap-2 border-b border-dn-gold/30">
           <span className="w-3 h-3 rounded-full border-2 border-dn-gold border-t-transparent animate-spin" />
           <span>{generationStatus || 'Generating creative variants...'}</span>
+        </div>
+      )}
+
+      {generationError && !isGenerating && (
+        <div className="bg-red-950/80 text-red-200 px-4 py-2 text-xs flex items-center justify-center gap-3 border-b border-red-800">
+          <span>{generationError}</span>
+          <button onClick={() => setGenerationError('')} className="underline text-red-300 hover:text-white">
+            Dismiss
+          </button>
         </div>
       )}
 

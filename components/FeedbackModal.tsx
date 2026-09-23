@@ -17,10 +17,11 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   onClose,
   onSubmitFeedback,
 }) => {
+  const [note, setNote] = useState('');
+
   if (!isOpen || !creative || !rating) return null;
 
   const isGood = rating === 'good';
-  const [note, setNote] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

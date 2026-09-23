@@ -1,4 +1,5 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Modality } from '@google/genai';
+import { getGeminiApiKey } from '../utils/apiKey';
 import { CampaignBrief, GeneratedCreative, MasterRatio, RefImage } from '../types';
 import {
   PROMPT_PREFIX,
@@ -115,7 +116,7 @@ export async function generateCreativeVariants(
   ].slice(0, count);
 
   const results: GeneratedCreative[] = [];
-  const apiKey = (process.env as any).GEMINI_API_KEY || (process.env as any).API_KEY;
+  const apiKey = getGeminiApiKey();
 
   for (let i = 0; i < variantAxes.length; i++) {
     const axis = variantAxes[i];
@@ -124,32 +125,22 @@ export async function generateCreativeVariants(
     const assembly = assembleImagePrompt(brief, masterRatio, axis);
     let base64Image = '';
 
-    if (apiKey) {
+    let generationError = '';
+
+    if (!apiKey) {
+      generationError = 'No Gemini API key found (GEMINI_API_KEY / API_KEY). Showing a placeholder base.';
+    } else {
+      onProgress?.(i + 1, count, `Generating visual base via Gemini 2.5 Flash Image...`);
       try {
-        onProgress?.(i + 1, count, `Generating visual base via Gemini 2.5 Flash Image...`);
-        const ai = new GoogleGenAI({ apiKey });
-        const parts: any[] = [...assembly.imageParts, { text: assembly.fullPromptText }];
-
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
-          contents: parts,
-          config: {
-            // @ts-ignore
-            aspectRatio: masterRatio,
-          },
-        });
-
-        // Parse image output from response candidate parts
-        if (response.candidates && response.candidates[0]?.content?.parts) {
-          for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData?.data) {
-              base64Image = `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
-              break;
-            }
-          }
-        }
-      } catch (err) {
-        console.warn(`Variant ${i + 1} API image generation failed, falling back to procedural studio base:`, err);
+        base64Image = await generateGeminiImage(
+          apiKey,
+          [...assembly.imageParts, { text: assembly.fullPromptText }],
+          masterRatio,
+          (msg) => onProgress?.(i + 1, count, msg)
+        );
+      } catch (err: any) {
+        generationError = err?.message || String(err);
+        console.error(`Variant ${i + 1} image generation failed:`, err);
       }
     }
 
@@ -174,10 +165,62 @@ export async function generateCreativeVariants(
       adName,
       rating: null,
       createdAt: new Date().toISOString(),
+      generationError: generationError || undefined,
     });
   }
 
   return results;
+}
+
+const IMAGE_MODEL = 'gemini-2.5-flash-image';
+
+/**
+ * Calls Gemini image generation with the correct image config and retries
+ * transient failures (rate limits / overload). Throws with a readable reason
+ * when no image comes back (e.g. safety block or text-only answer).
+ */
+async function generateGeminiImage(
+  apiKey: string,
+  parts: any[],
+  masterRatio: MasterRatio,
+  onStatus?: (msg: string) => void
+): Promise<string> {
+  const ai = new GoogleGenAI({ apiKey });
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: IMAGE_MODEL,
+        contents: [{ role: 'user', parts }],
+        config: {
+          responseModalities: [Modality.IMAGE],
+          imageConfig: { aspectRatio: masterRatio },
+        },
+      });
+
+      const candidate = response.candidates?.[0];
+      for (const part of candidate?.content?.parts || []) {
+        if (part.inlineData?.data) {
+          return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
+        }
+      }
+
+      const textReply = candidate?.content?.parts?.find((p) => p.text)?.text;
+      const blockReason = response.promptFeedback?.blockReason || candidate?.finishReason;
+      throw new Error(
+        `Gemini returned no image${blockReason ? ` (${blockReason})` : ''}${textReply ? `: ${textReply.slice(0, 200)}` : ''}`
+      );
+    } catch (err: any) {
+      const msg = String(err?.message || err);
+      const retryable = /429|RESOURCE_EXHAUSTED|503|UNAVAILABLE|overloaded|500|INTERNAL/i.test(msg);
+      if (!retryable || attempt === maxAttempts) throw err;
+      const waitMs = 2000 * 2 ** (attempt - 1);
+      onStatus?.(`Gemini busy or rate-limited, retrying in ${waitMs / 1000}s (attempt ${attempt + 1}/${maxAttempts})...`);
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+  throw new Error('Image generation failed after retries.');
 }
 
 /**

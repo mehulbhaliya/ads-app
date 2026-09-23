@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { getGeminiApiKey } from '../utils/apiKey';
 import { CampaignBrief, MetaAdCopy } from '../types';
 
 const BANNED_WORDS = [
@@ -87,7 +88,7 @@ export async function generateMetaCopy(brief: CampaignBrief): Promise<MetaAdCopy
 
   const highlights = brief.course.curriculumHighlights.slice(0, 4);
 
-  const apiKey = (process.env as any).GEMINI_API_KEY || (process.env as any).API_KEY;
+  const apiKey = getGeminiApiKey();
 
   if (apiKey) {
     try {
