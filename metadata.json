@@ -1,0 +1,6 @@
+{
+  "name": "DigiNerve Ad Creative Studio",
+  "description": "Production studio transforming campaign briefs into launch-ready Meta ad packages with AI visual bases, brand-composited text layers, course-fact-grounded ad copy, and tracking-compliant naming standards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

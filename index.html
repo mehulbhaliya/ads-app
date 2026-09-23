@@ -1,0 +1,92 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function() {
+        function makeSettable(target, prop) {
+          if (!target) return;
+          try {
+            var current = target[prop];
+            Object.defineProperty(target, prop, {
+              get: function() { return current; },
+              set: function(v) { current = v; },
+              configurable: true,
+              enumerable: true
+            });
+          } catch (e) {
+            try {
+              var proto = Object.getPrototypeOf(target);
+              if (proto) {
+                var pVal = proto[prop];
+                Object.defineProperty(proto, prop, {
+                  get: function() { return pVal; },
+                  set: function(v) { pVal = v; },
+                  configurable: true,
+                  enumerable: true
+                });
+              }
+            } catch (_) {}
+          }
+        }
+        makeSettable(window, 'fetch');
+        if (typeof Window !== 'undefined' && Window.prototype) {
+          makeSettable(Window.prototype, 'fetch');
+        }
+        try {
+          if (typeof FormData !== 'undefined' && !FormData.prototype.keys) {
+            FormData.prototype.keys = function* () {
+              for (var entry of this.entries()) {
+                yield entry[0];
+              }
+            };
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <title>DigiNerve Ad Creative Studio</title>
+    <meta name="description" content="Production studio transforming campaign briefs into launch-ready Meta ad packages with AI visual bases, brand-composited text layers, course-fact-grounded ad copy, and tracking-compliant naming standards." />
+    <meta property="og:title" content="DigiNerve Ad Creative Studio" />
+    <meta property="og:description" content="Production studio transforming campaign briefs into launch-ready Meta ad packages with AI visual bases, brand-composited text layers, course-fact-grounded ad copy, and tracking-compliant naming standards." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'dn-navy': '#16345E',
+              'dn-navy-deep': '#0C2038',
+              'dn-gold': '#F0A63C',
+              'dn-tint': '#EAF4FB',
+              'dn-success': '#1D9A66',
+              'brand-primary': '#16345E',
+              'brand-secondary': '#F0A63C',
+              'gray-900': '#0C2038',
+              'gray-800': '#132845',
+              'gray-700': '#1E3A5F',
+              'gray-600': '#33537D',
+            },
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.16.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-900 text-gray-100">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
