@@ -199,12 +199,26 @@ export async function generateCreativeVariants(
   return results;
 }
 
-const IMAGE_MODEL = 'gemini-2.5-flash-image';
+// Newest first; older models are tried when a newer one is unavailable to this key.
+const IMAGE_MODELS = ['gemini-3.1-flash-image', 'gemini-2.5-flash-image'];
+
+/** Turns raw Gemini errors into something a marketer can act on. */
+export function friendlyGeminiError(raw: string): string {
+  if (/limit:\s*0/.test(raw) && /free_tier/i.test(raw)) {
+    return 'Your Gemini key is on the free tier, which includes no image generation. Turn on billing for this key in Google AI Studio (Get API key → Set up billing), or use OpenArt.';
+  }
+  if (/RESOURCE_EXHAUSTED|429/.test(raw)) {
+    const wait = raw.match(/retry in ([\d.]+)s/i);
+    return `Gemini rate limit reached${wait ? `, try again in ${Math.ceil(Number(wait[1]))}s` : ', try again in a minute'}.`;
+  }
+  if (/API key not valid|PERMISSION_DENIED|401|403/.test(raw)) return 'Gemini rejected the API key. Check GEMINI_API_KEY.';
+  if (/SAFETY|blocked/i.test(raw)) return 'Gemini blocked this image for safety. Rephrase the high-priority instructions and try again.';
+  return raw.slice(0, 240);
+}
 
 /**
- * Calls Gemini image generation with the correct image config and retries
- * transient failures (rate limits / overload). Throws with a readable reason
- * when no image comes back (e.g. safety block or text-only answer).
+ * Calls Gemini image generation with the correct image config, falls back to
+ * older models when one is unavailable, and retries transient failures.
  */
 async function generateGeminiImage(
   apiKey: string,
@@ -214,40 +228,48 @@ async function generateGeminiImage(
 ): Promise<string> {
   const ai = new GoogleGenAI({ apiKey });
   const maxAttempts = 3;
+  let lastError: any = null;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const response = await ai.models.generateContent({
-        model: IMAGE_MODEL,
-        contents: [{ role: 'user', parts }],
-        config: {
-          responseModalities: [Modality.IMAGE],
-          imageConfig: { aspectRatio: masterRatio },
-        },
-      });
+  for (const model of IMAGE_MODELS) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: [{ role: 'user', parts }],
+          config: {
+            responseModalities: [Modality.IMAGE],
+            imageConfig: { aspectRatio: masterRatio },
+          },
+        });
 
-      const candidate = response.candidates?.[0];
-      for (const part of candidate?.content?.parts || []) {
-        if (part.inlineData?.data) {
-          return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
+        const candidate = response.candidates?.[0];
+        for (const part of candidate?.content?.parts || []) {
+          if (part.inlineData?.data) {
+            return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
+          }
         }
-      }
 
-      const textReply = candidate?.content?.parts?.find((p) => p.text)?.text;
-      const blockReason = response.promptFeedback?.blockReason || candidate?.finishReason;
-      throw new Error(
-        `Gemini returned no image${blockReason ? ` (${blockReason})` : ''}${textReply ? `: ${textReply.slice(0, 200)}` : ''}`
-      );
-    } catch (err: any) {
-      const msg = String(err?.message || err);
-      const retryable = /429|RESOURCE_EXHAUSTED|503|UNAVAILABLE|overloaded|500|INTERNAL/i.test(msg);
-      if (!retryable || attempt === maxAttempts) throw err;
-      const waitMs = 2000 * 2 ** (attempt - 1);
-      onStatus?.(`Gemini busy or rate-limited, retrying in ${waitMs / 1000}s (attempt ${attempt + 1}/${maxAttempts})...`);
-      await new Promise((r) => setTimeout(r, waitMs));
+        const textReply = candidate?.content?.parts?.find((p) => p.text)?.text;
+        const blockReason = response.promptFeedback?.blockReason || candidate?.finishReason;
+        throw new Error(
+          `Gemini returned no image${blockReason ? ` (${blockReason})` : ''}${textReply ? `: ${textReply.slice(0, 200)}` : ''}`
+        );
+      } catch (err: any) {
+        lastError = err;
+        const msg = String(err?.message || err);
+        // Model not offered to this key: move on to the next model.
+        if (/404|NOT_FOUND|no longer available/i.test(msg)) break;
+        // Zero quota never recovers by waiting: stop immediately.
+        if (/limit:\s*0/.test(msg)) throw new Error(friendlyGeminiError(msg));
+        const retryable = /429|RESOURCE_EXHAUSTED|503|UNAVAILABLE|overloaded|500|INTERNAL/i.test(msg);
+        if (!retryable || attempt === maxAttempts) throw new Error(friendlyGeminiError(msg));
+        const waitMs = 2000 * 2 ** (attempt - 1);
+        onStatus?.(`Gemini busy or rate-limited, retrying in ${waitMs / 1000}s (attempt ${attempt + 1}/${maxAttempts})...`);
+        await new Promise((r) => setTimeout(r, waitMs));
+      }
     }
   }
-  throw new Error('Image generation failed after retries.');
+  throw new Error(friendlyGeminiError(String(lastError?.message || lastError || 'Image generation failed.')));
 }
 
 /**

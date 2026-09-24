@@ -99,7 +99,7 @@ export async function generateMetaCopy(brief: CampaignBrief): Promise<MetaAdCopy
 COURSE: ${brief.course.courseName}
 SEGMENT: ${brief.segment}
 ANGLE: ${brief.angle}
-OFFER: ${brief.offer}
+OFFER: ${({ FLAT40: 'Flat 40% off', FLAT30: 'Flat 30% off', FREETRIAL: 'Free trial', FEST: 'Festive offer', LAUNCH: 'Launch offer', NOOFFER: 'No offer, do not mention discounts' } as Record<string, string>)[brief.offer] || brief.offer} (write it in plain words, never as a code)
 APPROVED NUMERIC CLAIMS (YOU CAN ONLY USE NUMBERS FROM THIS EXACT LIST, NO OTHER NUMBERS):
 ${approvedClaimsList.map((c) => `- "${c}"`).join('\n')}
 
@@ -133,13 +133,22 @@ Generate 5 distinct, high-converting concept options formatted as strict JSON:
 ]
 `;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-        },
-      });
+      // gemini-2.5-flash is closed to new keys; use the rolling alias, then a lite fallback.
+      let response: any = null;
+      let lastErr: any = null;
+      for (const model of ['gemini-flash-latest', 'gemini-3.1-flash-lite']) {
+        try {
+          response = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: { responseMimeType: 'application/json' },
+          });
+          break;
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+      if (!response) throw lastErr;
 
       const parsed = JSON.parse(response.text || '[]');
       if (Array.isArray(parsed) && parsed.length > 0) {
