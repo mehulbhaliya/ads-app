@@ -222,8 +222,18 @@ export function buildDefaultContent(brief: CampaignBrief, template?: TemplateId)
 }
 
 /** Returns human-readable problems that must be fixed before export. */
-export function validateContent(content: AdContent, course?: CourseFacts): string[] {
+export function validateContent(
+  content: AdContent,
+  course?: CourseFacts,
+  photos: { hasFacultyPhoto?: boolean; hasAiVisual?: boolean } = {}
+): string[] {
   const errors: string[] = [];
+  // An AI-generated face beside a real doctor's name reads as that doctor.
+  if (content.facultyName && !photos.hasFacultyPhoto && photos.hasAiVisual && content.template !== 'product-light') {
+    errors.push(
+      `The photo is AI-generated, but the ad names ${content.facultyName}. Upload their real photo, or set Faculty to "No faculty on this ad".`
+    );
+  }
   const approved = new Set((course?.approvedClaims || []).filter((c) => !c.conflict).map((c) => c.claim));
   content.proofs.forEach((p) => {
     if (p.trim() && !approved.has(p)) errors.push(`Proof "${p}" is not an approved claim for this course.`);

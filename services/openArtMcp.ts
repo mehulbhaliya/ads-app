@@ -24,11 +24,15 @@ export interface OpenArtConfig {
 const STORAGE_KEY = 'diginerve_openart_config_v2';
 
 function defaultProxyUrl(): string {
+  let configured = '';
   try {
-    return process.env.OPENART_PROXY_URL || '';
+    configured = process.env.OPENART_PROXY_URL || '';
   } catch {
-    return '';
+    configured = '';
   }
+  if (configured) return configured;
+  // Running on this PC: the proxy in /server listens on :8080.
+  return typeof location !== 'undefined' && location.hostname === 'localhost' ? 'http://localhost:8080' : '';
 }
 
 export function loadOpenArtConfig(): OpenArtConfig {

@@ -34,6 +34,8 @@ interface McpPromptBridgeProps {
   isOpen: boolean;
   onClose: () => void;
   onImportGeneratedImage: (base64Image: string) => void;
+  /** Exact prompt for the selected variant (layout-slot aware); falls back to a generic scaffold. */
+  promptOverride?: string;
 }
 
 export const McpPromptBridge: React.FC<McpPromptBridgeProps> = ({
@@ -42,6 +44,7 @@ export const McpPromptBridge: React.FC<McpPromptBridgeProps> = ({
   isOpen,
   onClose,
   onImportGeneratedImage,
+  promptOverride,
 }) => {
   const [copied, setCopied] = useState(false);
   const [importUrl, setImportUrl] = useState('');
@@ -57,7 +60,8 @@ export const McpPromptBridge: React.FC<McpPromptBridgeProps> = ({
 
   if (!isOpen) return null;
 
-  const assembly = assembleImagePrompt(brief, masterRatio);
+  const generic = assembleImagePrompt(brief, masterRatio);
+  const assembly = { ...generic, fullPromptText: promptOverride || generic.fullPromptText };
   const isConnected = Boolean(openArtConfig.session);
   const selectedModel = OPENART_MODELS.find((m) => m.id === openArtConfig.model) || OPENART_MODELS[0];
 

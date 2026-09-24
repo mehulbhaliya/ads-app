@@ -382,6 +382,7 @@ export const App: React.FC = () => {
         isOpen={mcpModalOpen}
         onClose={() => setMcpModalOpen(false)}
         onImportGeneratedImage={handleImportMcpImage}
+        promptOverride={activeCreative?.resolvedPrompt}
       />
 
       <FeedbackModal

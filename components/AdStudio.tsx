@@ -109,9 +109,6 @@ export const AdStudio: React.FC<AdStudioProps> = ({
   const faculty = useMemo(() => confirmedFaculty(course), [course]);
   const claims = useMemo(() => chipClaims(course), [course]);
   const variants = useMemo(() => courseVariants(course), [course]);
-  const errors = useMemo(() => validateContent(content, course), [content, course]);
-  const unapprovedOnly = errors.length > 0 && errors.every((e) => e.startsWith('Proof "'));
-  const blocked = errors.length > 0 && !(unapprovedOnly && claimsVerified);
 
   const set = (patch: Partial<AdContent>) => onChangeContent({ ...content, ...patch });
 
@@ -123,6 +120,12 @@ export const AdStudio: React.FC<AdStudioProps> = ({
 
   const facultySrc = creative.facultyPhoto || brief.references.find((r) => r.role === 'brandLock')?.base64;
   const baseIsPlaceholder = !!creative.generationError;
+  const errors = useMemo(
+    () => validateContent(content, course, { hasFacultyPhoto: !!facultySrc, hasAiVisual: !baseIsPlaceholder && !!creative.base64 }),
+    [content, course, facultySrc, baseIsPlaceholder, creative.base64]
+  );
+  const unapprovedOnly = errors.length > 0 && errors.every((e) => e.startsWith('Proof "'));
+  const blocked = errors.length > 0 && !(unapprovedOnly && claimsVerified);
 
   const handleExport = async (targets: Ratio[]) => {
     if (blocked) return;
