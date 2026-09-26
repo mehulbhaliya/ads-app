@@ -94,10 +94,11 @@ ${opt.cta}`;
                 <div className="flex items-center gap-1.5 text-[10px] font-mono">
                   <span
                     className={`px-1.5 py-0.5 rounded ${
-                      opt.primaryTextLength <= 125 ? 'bg-green-950 text-green-300' : 'bg-red-950 text-red-300'
+                      opt.primaryTextValid ? 'bg-green-950 text-green-300' : 'bg-red-950 text-red-300'
                     }`}
+                    title="The hook must fit in the first 125 characters (shown before 'See more'). The full primary text may be longer."
                   >
-                    Primary: {opt.primaryTextLength}/125
+                    Hook: {opt.hookLength}/125 · Total {opt.primaryTextLength}
                   </span>
                   <span
                     className={`px-1.5 py-0.5 rounded ${

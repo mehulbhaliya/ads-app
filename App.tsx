@@ -29,6 +29,12 @@ type StudioTab = 'brief' | 'canvas' | 'copy' | 'naming' | 'learning';
 
 const LOGO_STORAGE_KEY = 'diginerve_custom_logo_v1';
 
+// Today's date as DDMMYY / MMYY for the naming convention.
+const TODAY = new Date();
+const DD = String(TODAY.getDate()).padStart(2, '0');
+const MM = String(TODAY.getMonth() + 1).padStart(2, '0');
+const YY = String(TODAY.getFullYear()).slice(-2);
+
 const INITIAL_BRIEF: CampaignBrief = {
   brand: 'DN',
   type: 'SALES',
@@ -39,10 +45,11 @@ const INITIAL_BRIEF: CampaignBrief = {
   geo: 'IN',
   targeting: 'INT',
   audience: 'OBGYN-RESIDENTS',
-  launchMonth: '0926',
-  launchDate: '220926',
+  launchMonth: `${MM}${YY}`,
+  launchDate: `${DD}${MM}${YY}`,
   angle: Angle.Faculty,
-  offer: 'FLAT40',
+  // Playbook r7: cold creatives lead with one idea, not a coupon.
+  offer: 'NOOFFER',
   course: COURSE_FACTS[0], // OBGYN MD
   references: [],
   userNotes: '',

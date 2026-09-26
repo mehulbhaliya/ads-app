@@ -22,6 +22,13 @@ const BANNED_WORDS = [
   'doctutorials',
 ];
 
+/** The hook is the first line, or the first sentence when there is no line break. */
+export function hookLength(primaryText: string): number {
+  const firstLine = primaryText.trim().split(/\n/)[0] || '';
+  const m = firstLine.match(/^.*?[.?!](\s|$)/);
+  return (m ? m[0] : firstLine).trim().length;
+}
+
 export function validateCopyRules(
   copy: { primaryText: string; headline: string; description: string },
   brief: CampaignBrief
@@ -166,7 +173,8 @@ Generate 5 distinct, high-converting concept options formatted as strict JSON:
             conceptName: item.conceptName || `Concept ${idx + 1}`,
             primaryText: pt,
             primaryTextLength: pt.length,
-            primaryTextValid: pt.length <= 125,
+            hookLength: hookLength(pt),
+            primaryTextValid: hookLength(pt) <= 125,
             headline: hl,
             headlineLength: hl.length,
             headlineValid: hl.length <= 40,
@@ -257,7 +265,8 @@ function generateCuratedGroundCopy(brief: CampaignBrief, claims: string[]): Meta
       conceptName: c.name,
       primaryText: c.pt,
       primaryTextLength: c.pt.length,
-      primaryTextValid: c.pt.length <= 125,
+      hookLength: hookLength(c.pt),
+      primaryTextValid: hookLength(c.pt) <= 125,
       headline: c.hl,
       headlineLength: c.hl.length,
       headlineValid: c.hl.length <= 40,

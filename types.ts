@@ -172,6 +172,9 @@ export interface MetaAdCopy {
   conceptName: string;
   primaryText: string;
   primaryTextLength: number;
+  /** Length of the hook (first line or sentence), which must show before "See more". */
+  hookLength: number;
+  /** True when the hook fits in the first 125 characters; the full text may be longer. */
   primaryTextValid: boolean;
   headline: string;
   headlineLength: number;
