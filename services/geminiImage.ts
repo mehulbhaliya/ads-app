@@ -153,30 +153,45 @@ export async function generateCreativeVariants(
 
     const assembly = assembleImagePrompt(brief, masterRatio, slots ? `${axis}. ${slots[i].prompt}` : axis);
     let base64Image = '';
-
     let generationError = '';
 
-    if (!apiKey) {
-      generationError = 'No Gemini API key found (GEMINI_API_KEY / API_KEY). Showing a placeholder base.';
-    } else if (isGeminiFreeTier()) {
-      // Already known: this key has no image quota. Don't spend calls rediscovering it.
-      generationError = FREE_TIER_IMAGE_MESSAGE;
-    } else {
-      onProgress?.(i + 1, count, `Generating visual base via Gemini 2.5 Flash Image...`);
+    const hasRefs = brief.references && brief.references.length > 0;
+
+    // When the user uploads creatives they like, adapt them directly as the visual base!
+    if (hasRefs) {
+      const ref = brief.references[i % brief.references.length];
+      onProgress?.(i + 1, count, `Compositing uploaded creative "${ref.name || 'Creative'}" into Variant ${i + 1}...`);
       try {
-        base64Image = await generateGeminiImage(
-          apiKey,
-          [...assembly.imageParts, { text: assembly.fullPromptText }],
-          masterRatio,
-          (msg) => onProgress?.(i + 1, count, msg)
-        );
-      } catch (err: any) {
-        generationError = err?.message || String(err);
-        if (generationError === FREE_TIER_IMAGE_MESSAGE) {
-          markGeminiFreeTier();
-          console.info('Gemini key is on the free tier: AI visuals skipped, copy still uses Gemini.');
-        } else {
-          console.error(`Variant ${i + 1} image generation failed:`, err);
+        base64Image = await createBaseFromReference(ref, masterRatio, i, brief);
+      } catch (err) {
+        console.warn('Failed to render base from uploaded ref, falling back to procedural:', err);
+      }
+    }
+
+    if (!base64Image) {
+      if (isGeminiFreeTier()) {
+        onProgress?.(i + 1, count, `Compositing clinical visual layout for Variant ${i + 1} (Free Tier)...`);
+        base64Image = createProceduralMedicalBase(brief, masterRatio, i);
+      } else if (!apiKey) {
+        generationError = 'No Gemini API key found. Using procedural clinical visual base.';
+        base64Image = createProceduralMedicalBase(brief, masterRatio, i);
+      } else {
+        onProgress?.(i + 1, count, `Generating visual base via Gemini Flash Image...`);
+        try {
+          base64Image = await generateGeminiImage(
+            apiKey,
+            [...assembly.imageParts, { text: assembly.fullPromptText }],
+            masterRatio,
+            (msg) => onProgress?.(i + 1, count, msg)
+          );
+        } catch (err: any) {
+          generationError = err?.message || String(err);
+          if (generationError === FREE_TIER_IMAGE_MESSAGE) {
+            markGeminiFreeTier();
+            console.info('Gemini key is on the free tier: visual base generated procedurally, copy uses Gemini.');
+          } else {
+            console.error(`Variant ${i + 1} image generation failed:`, err);
+          }
         }
       }
     }
@@ -212,18 +227,27 @@ export async function generateCreativeVariants(
 export const FREE_TIER_IMAGE_MESSAGE =
   'This Gemini key is on the free tier, which includes no image generation. Copy still runs on Gemini. For AI visuals, turn on billing for the key in Google AI Studio (Get API key → Set up billing), use OpenArt, or upload a photo.';
 
-// Newest first; older models are tried when a newer one is unavailable to this key.
-const IMAGE_MODELS = ['gemini-3.1-flash-image', 'gemini-2.5-flash-image'];
+// Valid Gemini image generation models
+const IMAGE_MODELS = ['gemini-3.1-flash-image', 'gemini-3.1-flash-lite-image'];
 
 /** Turns raw Gemini errors into something a marketer can act on. */
 export function friendlyGeminiError(raw: string): string {
-  if (/limit:\s*0/.test(raw) && /free_tier/i.test(raw)) return FREE_TIER_IMAGE_MESSAGE;
+  if (/limit:\s*0/i.test(raw) || /free_tier/i.test(raw) || /quota.*image/i.test(raw)) {
+    return FREE_TIER_IMAGE_MESSAGE;
+  }
   if (/RESOURCE_EXHAUSTED|429/.test(raw)) {
     const wait = raw.match(/retry in ([\d.]+)s/i);
     return `Gemini rate limit reached${wait ? `, try again in ${Math.ceil(Number(wait[1]))}s` : ', try again in a minute'}.`;
   }
-  if (/API key not valid|PERMISSION_DENIED|401|403/.test(raw)) return 'Gemini rejected the API key. Check GEMINI_API_KEY.';
-  if (/SAFETY|blocked/i.test(raw)) return 'Gemini blocked this image for safety. Rephrase the high-priority instructions and try again.';
+  if (/PERMISSION_DENIED|403/.test(raw)) {
+    return 'Gemini image generation requires a paid API key with billing enabled. Procedural visual base used as fallback.';
+  }
+  if (/API key not valid|401/.test(raw)) {
+    return 'Gemini API key is invalid or not authorized. Check GEMINI_API_KEY in Settings.';
+  }
+  if (/SAFETY|blocked/i.test(raw)) {
+    return 'Gemini blocked this image for safety. Rephrase the high-priority instructions and try again.';
+  }
   return raw.slice(0, 240);
 }
 
@@ -281,6 +305,149 @@ async function generateGeminiImage(
     }
   }
   throw new Error(friendlyGeminiError(String(lastError?.message || lastError || 'Image generation failed.')));
+}
+
+function loadImg(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = src;
+  });
+}
+
+/**
+ * Transforms an uploaded reference creative into a production-ready ad visual base,
+ * applying brand framing, negative space protection, and editorial treatments.
+ */
+export async function createBaseFromReference(
+  ref: RefImage,
+  ratio: MasterRatio,
+  variantIndex: number,
+  _brief: CampaignBrief
+): Promise<string> {
+  const w = 1080;
+  const h = ratio === '9:16' ? 1920 : 1440;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return ref.base64;
+
+  const img = await loadImg(ref.base64);
+
+  // Variant 0: Full-bleed Hero Fit with protected copy zones
+  if (variantIndex % 3 === 0) {
+    const scale = Math.max(w / img.width, h / img.height);
+    const sw = img.width * scale;
+    const sh = img.height * scale;
+    const sx = (w - sw) / 2;
+    const sy = (h - sh) / 2;
+    ctx.drawImage(img, sx, sy, sw, sh);
+
+    // Subtle dark gradient vignette at the top and bottom to protect logo, headline, and CTA
+    const topGrad = ctx.createLinearGradient(0, 0, 0, h * 0.28);
+    topGrad.addColorStop(0, 'rgba(12, 32, 56, 0.7)');
+    topGrad.addColorStop(1, 'rgba(12, 32, 56, 0)');
+    ctx.fillStyle = topGrad;
+    ctx.fillRect(0, 0, w, h * 0.28);
+
+    const botGrad = ctx.createLinearGradient(0, h * 0.52, 0, h);
+    botGrad.addColorStop(0, 'rgba(12, 32, 56, 0)');
+    botGrad.addColorStop(0.5, 'rgba(12, 32, 56, 0.75)');
+    botGrad.addColorStop(1, 'rgba(12, 32, 56, 0.95)');
+    ctx.fillStyle = botGrad;
+    ctx.fillRect(0, h * 0.52, w, h * 0.48);
+  }
+  // Variant 1: Elevated Studio Card Showcase
+  else if (variantIndex % 3 === 1) {
+    const bgGrad = ctx.createLinearGradient(0, 0, w, h);
+    bgGrad.addColorStop(0, '#0C2038');
+    bgGrad.addColorStop(0.5, '#16345E');
+    bgGrad.addColorStop(1, '#0C2038');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Warm ambient glow
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    const glow = ctx.createRadialGradient(w * 0.5, h * 0.38, 50, w * 0.5, h * 0.38, 450);
+    glow.addColorStop(0, '#F0A63C');
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+
+    // Card frame
+    const cardMarginX = 54;
+    const cardY = h * 0.16;
+    const cardW = w - cardMarginX * 2;
+    const cardH = h * 0.44;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(cardMarginX, cardY, cardW, cardH, 20);
+    ctx.clip();
+
+    const scale = Math.max(cardW / img.width, cardH / img.height);
+    const sw = img.width * scale;
+    const sh = img.height * scale;
+    const sx = cardMarginX + (cardW - sw) / 2;
+    const sy = cardY + (cardH - sh) / 2;
+    ctx.drawImage(img, sx, sy, sw, sh);
+    ctx.restore();
+
+    // Subtle border
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(cardMarginX, cardY, cardW, cardH, 20);
+    ctx.strokeStyle = 'rgba(240, 166, 60, 0.4)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
+
+    // Bottom soft white copy base
+    const copyGrad = ctx.createLinearGradient(0, h * 0.62, 0, h);
+    copyGrad.addColorStop(0, 'rgba(12, 32, 56, 0)');
+    copyGrad.addColorStop(0.3, 'rgba(234, 244, 251, 0.9)');
+    copyGrad.addColorStop(1, '#FFFFFF');
+    ctx.fillStyle = copyGrad;
+    ctx.fillRect(0, h * 0.62, w, h * 0.38);
+  }
+  // Variant 2: Clean Split / Modern Clinical Context
+  else {
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, '#10243E');
+    bgGrad.addColorStop(0.5, '#1B375C');
+    bgGrad.addColorStop(1, '#0C2038');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    const imgH = h * 0.58;
+    const scale = Math.max(w / img.width, imgH / img.height);
+    const sw = img.width * scale;
+    const sh = img.height * scale;
+    const sx = (w - sw) / 2;
+    const sy = (imgH - sh) / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, w, imgH);
+    ctx.clip();
+    ctx.drawImage(img, sx, sy, sw, sh);
+    ctx.restore();
+
+    const seamGrad = ctx.createLinearGradient(0, imgH - 120, 0, imgH + 40);
+    seamGrad.addColorStop(0, 'rgba(16, 36, 62, 0)');
+    seamGrad.addColorStop(1, '#0C2038');
+    ctx.fillStyle = seamGrad;
+    ctx.fillRect(0, imgH - 120, w, 160);
+
+    ctx.fillStyle = '#F0A63C';
+    ctx.fillRect(54, imgH + 30, 80, 4);
+  }
+
+  return canvas.toDataURL('image/jpeg', 0.88);
 }
 
 /**

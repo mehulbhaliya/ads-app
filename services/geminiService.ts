@@ -6,8 +6,8 @@ if (!process.env.API_KEY) {
 }
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-const imageModel = 'gemini-2.5-flash-image-preview';
-const textModel = 'gemini-2.5-flash';
+const imageModel = 'gemini-3.1-flash-image';
+const textModel = 'gemini-3.8-flash';
 
 const extractImageBase64 = (response: any): string => {
   const imagePart = response.candidates?.[0]?.content?.parts?.find(

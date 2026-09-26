@@ -55,9 +55,31 @@ export function clearUserGeminiKey(): void {
   }
 }
 
+const TIER_MODE_STORAGE = 'dn_gemini_tier_mode_v2';
+
+export type GeminiTierMode = 'free' | 'paid';
+
+export function getGeminiTierMode(): GeminiTierMode {
+  try {
+    const saved = localStorage.getItem(TIER_MODE_STORAGE);
+    if (saved === 'paid') return 'paid';
+    return 'free'; // Switched to Free Tier by default
+  } catch {
+    return 'free';
+  }
+}
+
+export function setGeminiTierMode(mode: GeminiTierMode): void {
+  try {
+    localStorage.setItem(TIER_MODE_STORAGE, mode);
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
- * Free-tier keys have no image quota. Once Gemini says so, remember it for the
- * session so the app stops retrying images and keeps using Gemini for copy.
+ * Free-tier keys have no image quota. Once Gemini says so or mode is free,
+ * the app generates branded procedural visual bases and keeps using Gemini for copy.
  */
 let freeTierThisPage = false;
 export function markGeminiFreeTier(): void {
@@ -70,6 +92,7 @@ export function markGeminiFreeTier(): void {
 }
 
 export function isGeminiFreeTier(): boolean {
+  if (getGeminiTierMode() === 'free') return true;
   if (freeTierThisPage) return true;
   try {
     const tag = sessionStorage.getItem(FREE_TIER_STORAGE);

@@ -120,23 +120,37 @@ export const BriefScreen: React.FC<BriefScreenProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onOpenMcpBridge}
-              className="px-4 py-2.5 text-xs font-semibold bg-gray-800/80 hover:bg-gray-700 text-gray-200 border border-gray-600 rounded-lg flex items-center gap-2 transition"
-              title="View & copy prompt for external MCP tools"
-            >
-              <Layers className="w-4 h-4 text-dn-gold" />
-              <span>OpenArt Prompt</span>
-            </button>
-            <button
-              onClick={onStartGenerating}
-              disabled={isGenerating}
-              className="px-6 py-2.5 bg-dn-gold hover:bg-yellow-400 text-dn-navy-deep font-bold rounded-lg shadow-lg flex items-center gap-2 transition transform active:scale-95 disabled:opacity-50"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>{isGenerating ? 'Generating Variants...' : 'Generate 3 Variants'}</span>
-            </button>
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onOpenMcpBridge}
+                className="px-4 py-2.5 text-xs font-semibold bg-gray-800/80 hover:bg-gray-700 text-gray-200 border border-gray-600 rounded-lg flex items-center gap-2 transition"
+                title="View & copy prompt for external MCP tools"
+              >
+                <Layers className="w-4 h-4 text-dn-gold" />
+                <span>OpenArt Prompt</span>
+              </button>
+              <button
+                onClick={onStartGenerating}
+                disabled={isGenerating}
+                className="px-6 py-2.5 bg-dn-gold hover:bg-yellow-400 text-dn-navy-deep font-bold rounded-lg shadow-lg flex items-center gap-2 transition transform active:scale-95 disabled:opacity-50"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>
+                  {isGenerating
+                    ? 'Generating Variants...'
+                    : brief.references && brief.references.length > 0
+                    ? `Generate 3 Variants from ${brief.references.length} Uploaded Creative${brief.references.length > 1 ? 's' : ''}`
+                    : 'Generate 3 Variants'}
+                </span>
+              </button>
+            </div>
+            <span className="text-[11px] text-emerald-300 flex items-center gap-1 font-medium">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              {brief.references && brief.references.length > 0
+                ? `${brief.references.length} Uploaded creative${brief.references.length > 1 ? 's' : ''} will be adapted into ad variants`
+                : 'Free Tier: Gemini 3.8 Flash Copy + Branded Visual Layouts'}
+            </span>
           </div>
         </div>
       </div>
@@ -428,7 +442,12 @@ export const BriefScreen: React.FC<BriefScreenProps> = ({
             {/* Uploaded References List */}
             {brief.references && brief.references.length > 0 && (
               <div className="space-y-2 pt-2">
-                <span className="text-xs font-medium text-gray-400">Attached References ({brief.references.length}):</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    Attached Creatives ({brief.references.length}) · Ready to generate new variants
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {brief.references.map((ref) => (
                     <div

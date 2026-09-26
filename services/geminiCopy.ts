@@ -143,14 +143,36 @@ Generate 5 distinct, high-converting concept options formatted as strict JSON:
 ]
 `;
 
-      // gemini-2.5-flash is closed to new keys; use the rolling alias, then a lite fallback.
+      // Prepare multimodal parts if user has uploaded reference creatives
+      const parts: any[] = [];
+      if (brief.references && brief.references.length > 0) {
+        for (const ref of brief.references.slice(0, 3)) {
+          const rawData = ref.base64.includes(',') ? ref.base64.split(',')[1] : ref.base64;
+          if (rawData) {
+            parts.push({
+              inlineData: {
+                mimeType: ref.mimeType || 'image/jpeg',
+                data: rawData,
+              },
+            });
+          }
+        }
+      }
+
+      const effectivePrompt = brief.references && brief.references.length > 0
+        ? `${prompt}\nNOTE ON ATTACHED IMAGES: Study the attached user reference creative image(s). Adapt their winning structure, hook style, and tone while strictly preserving DigiNerve compliance and course facts.\n`
+        : prompt;
+
+      parts.push({ text: effectivePrompt });
+
+      // gemini-3.8-flash is the primary model for free-tier multimodal and text copy generation.
       let response: any = null;
       let lastErr: any = null;
-      for (const model of ['gemini-flash-latest', 'gemini-3.1-flash-lite']) {
+      for (const model of ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite']) {
         try {
           response = await ai.models.generateContent({
             model,
-            contents: prompt,
+            contents: parts.length > 1 ? [{ role: 'user', parts }] : effectivePrompt,
             config: { responseMimeType: 'application/json' },
           });
           break;

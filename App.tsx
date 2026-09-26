@@ -421,6 +421,7 @@ export const App: React.FC = () => {
                 content={activeContent}
                 onChangeContent={handleChangeContent}
                 onChangeFacultyPhoto={(photo) => updateCreative(activeCreative.id, { facultyPhoto: photo })}
+                onChangeCreativeBase={(photo) => updateCreative(activeCreative.id, { base64: photo })}
                 logoSrc={logoSrc}
                 onChangeLogo={handleChangeLogo}
                 onRegenerate={() => handleGenerateForAngle(approvedAngles.find((a) => a.templateAngle === activeBrief.angle))}
