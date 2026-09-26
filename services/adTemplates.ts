@@ -80,7 +80,7 @@ interface Block {
   gapAfter?: number; // unscaled units
 }
 
-function layoutStack(blocks: Block[], top: number, available: number, u: number, align: 'top' | 'center' | 'bottom' = 'top') {
+function layoutStack(blocks: Block[], top: number, available: number, u: number, align: 'top' | 'center' | 'bottom' | 'auto' = 'top') {
   const live = blocks.filter(Boolean);
   let s = 1;
   let total = 0;
@@ -88,7 +88,9 @@ function layoutStack(blocks: Block[], top: number, available: number, u: number,
     total = live.reduce((acc, b, i) => acc + b.measure(s) + (i < live.length - 1 ? (b.gapAfter ?? 24) * u * s : 0), 0);
     if (total <= available) break;
   }
-  let y = align === 'top' ? top : align === 'center' ? top + (available - total) / 2 : top + available - total;
+  // 'auto': top-aligned, but centred when more than a fifth of the space would sit empty.
+  const mode = align === 'auto' ? (available - total > available * 0.2 ? 'center' : 'top') : align;
+  let y = mode === 'top' ? top : mode === 'center' ? top + (available - total) / 2 : top + available - total;
   for (let i = 0; i < live.length; i++) {
     const b = live[i];
     const h = b.measure(s);
@@ -263,6 +265,22 @@ function drawProofRow(
   if (!items.length) return;
   const gap = h * 0.14;
   const tileW = (w - gap * (items.length - 1)) / items.length;
+  // House chip style: the number big ("2,000+"), the label smaller underneath,
+  // both at one size across all chips so they read as a set.
+  const split = (t: string) => {
+    const m = t.match(/^([\d,.]+\+?)\s+(.*)$/);
+    return m ? { num: m[1], label: m[2] } : { num: '', label: t };
+  };
+  const r0 = h * 0.3;
+  const textW0 = tileW - (h * 0.16 + 2 * r0 + h * 0.14) - h * 0.12;
+  const parts = items.map(split);
+  const numSize = Math.min(
+    ...parts.filter((q) => q.num).map((q) => fitText(ctx, q.num, { family: FONTS.heading, weight: 800, maxWidth: textW0, maxSize: h * 0.3, minSize: 12, maxLines: 1 }).size),
+    h * 0.3
+  );
+  const labelSize = Math.min(
+    ...parts.map((q) => fitText(ctx, q.label, { family: FONTS.heading, weight: 600, maxWidth: textW0, maxSize: h * 0.17, minSize: 10, maxLines: q.num ? 2 : 3, lineHeight: 1.12 }).size)
+  );
   items.forEach((p, i) => {
     const tx = x + i * (tileW + gap);
     if (style === 'light') {
@@ -285,9 +303,20 @@ function drawProofRow(
 
     const textX = cx + r + h * 0.14;
     const textW = tx + tileW - textX - h * 0.12;
-    const f = fitText(ctx, p, { family: FONTS.heading, weight: 700, maxWidth: textW, maxSize: h * 0.26, minSize: 11, maxLines: 3, lineHeight: 1.15 });
-    const ty = y + (h - f.height) / 2;
-    drawLines(ctx, f, textX, ty, { family: FONTS.heading, weight: 700, color: style === 'light' ? C.navyDeep : C.white });
+    const q = parts[i];
+    const color = style === 'light' ? C.navyDeep : C.white;
+    const labelFit = fitText(ctx, q.label, { family: FONTS.heading, weight: 600, maxWidth: textW, maxSize: labelSize, minSize: labelSize, maxLines: q.num ? 2 : 3, lineHeight: 1.12 });
+    const numH = q.num ? numSize * 1.1 : 0;
+    let ty = y + (h - numH - labelFit.height) / 2;
+    if (q.num) {
+      ctx.font = font(800, numSize, FONTS.heading);
+      ctx.fillStyle = style === 'light' ? C.navyDeep : C.gold;
+      ctx.textBaseline = 'top';
+      ctx.textAlign = 'left';
+      ctx.fillText(q.num, textX, ty, textW);
+      ty += numH;
+    }
+    drawLines(ctx, labelFit, textX, ty, { family: FONTS.heading, weight: 600, color });
   });
 }
 
@@ -409,10 +438,13 @@ function facultyHero(ctx: Ctx, f: Frame, c: AdContent, a: TemplateAssets) {
   const bottom = (hasProofs ? proofY : ctaY) - 30 * u;
 
   const blocks: Block[] = [];
+  let stackTop = top;
   if (!story) {
-    blocks.push({ measure: (s) => (W * 0.27 * s) / (a.logo?.aspect || 2.8), draw: (y, s) => drawLogo(ctx, a.logo, colX, y, W * 0.27 * s, true), gapAfter: 34 });
+    // Logo stays pinned at the top; only the text below it may be re-centred.
+    const lw = W * (land ? 0.2 : 0.27);
+    stackTop = top + drawLogo(ctx, a.logo, colX, top, lw, true) + 34 * u;
   }
-  blocks.push({ ...hookBlock(ctx, c, colX, colW, (land ? 58 : 100) * u, 4, C.white, C.gold), gapAfter: 18 });
+  blocks.push({ ...hookBlock(ctx, c, colX, colW, (land ? 58 : 100) * u, land ? 4 : 5, C.white, C.gold), gapAfter: 18 });
   blocks.push({ ...barBlock(ctx, colX, W * 0.2, 7 * u, C.gold), gapAfter: 28 });
 
   // Course card.
@@ -448,7 +480,7 @@ function facultyHero(ctx: Ctx, f: Frame, c: AdContent, a: TemplateAssets) {
   if (c.dateLine) {
     blocks.push(datePillBlock(ctx, c.dateLine, colX, colW, 30 * u));
   }
-  layoutStack(blocks, top, bottom - top, u, story ? 'center' : 'top');
+  layoutStack(blocks, stackTop, bottom - stackTop, u, story ? 'center' : 'auto');
 
   if (story) {
     drawLogo(ctx, a.logo, pad, f.safeTop - 10 * u, W * 0.3, true);

@@ -508,6 +508,23 @@ export const COURSE_FACTS: CourseFacts[] = [
       { claim: 'Cracking MRCOG Part 2 - Crash: ₹29,999.00, 3 Months', locator: 'Live Catalog', conflict: false },
       { claim: 'Cracking MRCOG - Part 3 – Live: ₹32,999.00, 2 Months', locator: 'Live Catalog', conflict: false },
       { claim: 'Cracking MRCOG - Part 3 – Non-Interactive: ₹27,999.00, 2 Months', locator: 'Live Catalog', conflict: false },
+      // Part 1 Crash Course only (diginerve.com course page, checked 24-Sep-2026). Never reuse on other variants.
+      { claim: '171 bite-sized video lectures', locator: 'Course page, Part 1 Crash Course', conflict: false, scope: 'MRCOG Part 1 Crash' },
+      { claim: '8+ hrs of video lectures', locator: 'Course page, Part 1 Crash Course', conflict: false, scope: 'MRCOG Part 1 Crash' },
+      { claim: '1,500 interactive flashcards', locator: 'Course page, Part 1 Crash Course', conflict: false, scope: 'MRCOG Part 1 Crash' },
+      { claim: '5 mock exam sets, 1,000 questions', locator: 'Course page, Part 1 Crash Course', conflict: false, scope: 'MRCOG Part 1 Crash' },
+      { claim: '170+ lecture notes', locator: 'Course page, Part 1 Crash Course', conflict: false, scope: 'MRCOG Part 1 Crash' },
+      { claim: 'Supported with RCOG and UK guidelines', locator: 'Course page, Part 1 Crash Course', conflict: false, scope: 'MRCOG Part 1 Crash' },
+      // Part 1 Comprehensive only (course page checked 25-Sep-2026; books + PYQs confirmed by Mehul). Never reuse on other variants.
+      { claim: '80+ hrs of video lectures', locator: 'Course page, Part 1 Comprehensive', conflict: false, scope: 'MRCOG Part 1 Comprehensive' },
+      { claim: '37+ hrs of question discussion', locator: 'Course page, Part 1 Comprehensive', conflict: false, scope: 'MRCOG Part 1 Comprehensive' },
+      { claim: '2,630+ single-best answers', locator: 'Course page, Part 1 Comprehensive (feature card)', conflict: false, scope: 'MRCOG Part 1 Comprehensive' },
+      { claim: '1,000+ flashcards', locator: 'Course page, Part 1 Comprehensive (6 & 12-month plans)', conflict: false, scope: 'MRCOG Part 1 Comprehensive' },
+      { claim: '10 sets of mock exams, 20 practice papers', locator: 'Course page, Part 1 Comprehensive', conflict: false, scope: 'MRCOG Part 1 Comprehensive' },
+      { claim: '70+ benchmark trials', locator: 'Course page, Part 1 Comprehensive', conflict: false, scope: 'MRCOG Part 1 Comprehensive' },
+      { claim: "Dr Richa's MRCOG Part 1 book (3rd edition), printed and delivered", locator: 'Course page + Mehul, 25-Sep-2026', conflict: false, scope: 'MRCOG Part 1 Comprehensive' },
+      { claim: '5 years of PYQs discussed', locator: 'Mehul, 25-Sep-2026', conflict: false, scope: 'MRCOG Part 1 Comprehensive' },
+      { claim: 'GTG guidelines covered', locator: 'Course page, Part 1 Comprehensive', conflict: false, scope: 'MRCOG Part 1 Comprehensive' },
     ],
     competitorContrast: [],
     cautions: [

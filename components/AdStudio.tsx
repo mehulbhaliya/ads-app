@@ -10,6 +10,7 @@ import {
   validateContent,
 } from '../services/adContent';
 import { AD_SIZES, renderAd, canvasToBlob } from '../services/adTemplates';
+import { expertAdvice } from '../constants/expertPlaybook';
 import { AdPreview, useBrandAssets } from './AdPreview';
 import { loadImage } from '../utils/logo';
 import {
@@ -26,6 +27,7 @@ import {
   BadgeCheck,
   Tag,
   LayoutTemplate,
+  Lightbulb,
 } from 'lucide-react';
 
 interface AdStudioProps {
@@ -124,6 +126,7 @@ export const AdStudio: React.FC<AdStudioProps> = ({
     () => validateContent(content, course, { hasFacultyPhoto: !!facultySrc, hasAiVisual: !baseIsPlaceholder && !!creative.base64 }),
     [content, course, facultySrc, baseIsPlaceholder, creative.base64]
   );
+  const advice = useMemo(() => expertAdvice(content), [content]);
   const unapprovedOnly = errors.length > 0 && errors.every((e) => e.startsWith('Proof "'));
   const blocked = errors.length > 0 && !(unapprovedOnly && claimsVerified);
 
@@ -238,6 +241,18 @@ export const AdStudio: React.FC<AdStudioProps> = ({
           ) : (
             <div className="p-2.5 rounded-lg bg-green-950/50 border border-green-800 text-green-200 text-xs flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4" /> Brand and claim checks passed. Ready to export.
+            </div>
+          )}
+          {advice.length > 0 && (
+            <div className="p-3 rounded-lg bg-amber-950/40 border border-amber-800/70 text-amber-100 text-xs space-y-1.5">
+              <div className="font-bold flex items-center gap-1.5">
+                <Lightbulb className="w-4 h-4" /> Expert playbook suggestions
+              </div>
+              <ul className="list-disc pl-5 space-y-0.5">
+                {advice.map((a) => (
+                  <li key={a}>{a}</li>
+                ))}
+              </ul>
             </div>
           )}
           {baseIsPlaceholder && (

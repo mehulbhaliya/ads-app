@@ -261,6 +261,18 @@ export function validateContent(
     const ok = confirmedFaculty(course).some((f) => f.name === content.facultyName);
     if (!ok) errors.push(`Faculty "${content.facultyName}" is not confirmed in the course library. Confirm internally before use.`);
   }
+  // ASCI: pass guarantees and "first attempt" promises are never allowed.
+  if (/first[- ]attempt|guarantee(d)?\s+(to\s+)?pass/i.test(allText)) {
+    errors.push('Pass guarantees and "first attempt" promises are not allowed.');
+  }
+  // Outcome claims (pass rates, "2X your chances") need a footnote with the
+  // measured basis: an asterisk plus "X of Y" and the sitting, e.g.
+  // "*Jul 2026: 17 of 20 DigiNerve subscribers passed vs RCOG overall 41%".
+  const outcomeClaim = /pass rate|\d+\s*%\s*(of\s+)?(students\s+)?pass|\b\d+\s*x\s+(your\s+)?chances?/i.test(allText);
+  const substantiated = /\*[^*]*\b\d+\s+of\s+\d+\b/i.test(allText) && !/\[(sitting|x|y|z)\]/i.test(allText);
+  if (outcomeClaim && !substantiated) {
+    errors.push('Outcome claims (pass rate, "2X your chances") need a footnote with the measured basis: "*[sitting]: X of Y subscribers passed vs overall Z%".');
+  }
   if (course?.courseCode === 'MRCOG' && /join us on|batch starts|live session|live class|live cohort/i.test(allText)) {
     errors.push('MRCOG is self-paced and recorded: no live or batch framing.');
   }

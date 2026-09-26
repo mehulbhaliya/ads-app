@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { splitCourseName, confirmedFaculty } from './adContent';
 import { getGeminiApiKey } from '../utils/apiKey';
+import { EXPERT_COPY_RULES } from '../constants/expertPlaybook';
 import { CampaignBrief, MetaAdCopy } from '../types';
 
 const BANNED_WORDS = [
@@ -106,8 +107,10 @@ ${approvedClaimsList.map((c) => `- "${c}"`).join('\n')}
 CURRICULUM HIGHLIGHTS:
 ${highlights.map((h) => `- ${h}`).join('\n')}
 
+${EXPERT_COPY_RULES}
+
 MANDATORY LIMITS:
-- Primary text: Maximum 125 chars before truncation. Hook within the first 90 chars.
+- Primary text: hook within the first 125 chars (shown before "See more"); the full text may be longer.
 - Headline: Maximum 40 chars hard ceiling (27 chars preferred).
 - Description: Maximum 27 chars.
 - CTA: Must be one of ["SIGN_UP", "APPLY_NOW", "BOOK_NOW", "SHOP_NOW", "LEARN_MORE", "WHATSAPP_MESSAGE"].

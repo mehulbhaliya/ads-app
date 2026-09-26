@@ -15,6 +15,7 @@ import { buildFeedbackBlocksForPrompt, getNextVersionNumber } from './learning';
 import { getDefaultLayers } from './compositor';
 import { buildAdName } from './naming';
 import { TemplateId } from './adContent';
+import { EXPERT_VISUAL_RULES } from '../constants/expertPlaybook';
 
 /** What the AI visual must look like for each finished-ad layout slot. */
 const SLOT_COMPOSITION: Record<TemplateId, { label: string; prompt: string }> = {
@@ -85,6 +86,7 @@ ${segmentPreset?.prompt || ''}
 ${anglePreset?.prompt || ''}
 - **Precedence:** Overrides Levels 1 and 2 for composition, subject focus and lighting treatment.
 `,
+    EXPERT_VISUAL_RULES,
   ];
 
   if (sortedRefs.some((r) => r.role === 'houseReference')) {
