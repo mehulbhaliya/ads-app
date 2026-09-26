@@ -11,7 +11,10 @@ Builds compliant Meta and Google ad creatives and copy for DigiNerve courses:
 ## Run in Google AI Studio
 
 1. Import this repo (branch `main`).
-2. Use a Gemini API key **with billing enabled**. Free-tier keys have no image generation; the app then shows a neutral placeholder photo, and copy still works.
+2. Nothing to configure: the app uses the Gemini key of whichever AI Studio account opens it (header chip: "Gemini: account key").
+   - **Free-tier key:** ad copy runs on Gemini; AI visuals are skipped after the first check (chip: "free tier (copy only)"). Use OpenArt or upload a photo for visuals.
+   - **Billing-enabled key:** AI visuals generate too.
+   - **Outside AI Studio:** click the chip and paste a key (stored in that browser only).
 3. Upload the DigiNerve logo and faculty photos in the app. Brand images are not stored in the repo.
 
 ## Run locally

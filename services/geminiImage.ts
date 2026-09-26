@@ -1,5 +1,5 @@
 import { GoogleGenAI, Modality } from '@google/genai';
-import { getGeminiApiKey } from '../utils/apiKey';
+import { getGeminiApiKey, isGeminiFreeTier, markGeminiFreeTier } from '../utils/apiKey';
 import { CampaignBrief, GeneratedCreative, MasterRatio, RefImage } from '../types';
 import {
   PROMPT_PREFIX,
@@ -158,6 +158,9 @@ export async function generateCreativeVariants(
 
     if (!apiKey) {
       generationError = 'No Gemini API key found (GEMINI_API_KEY / API_KEY). Showing a placeholder base.';
+    } else if (isGeminiFreeTier()) {
+      // Already known: this key has no image quota. Don't spend calls rediscovering it.
+      generationError = FREE_TIER_IMAGE_MESSAGE;
     } else {
       onProgress?.(i + 1, count, `Generating visual base via Gemini 2.5 Flash Image...`);
       try {
@@ -169,7 +172,12 @@ export async function generateCreativeVariants(
         );
       } catch (err: any) {
         generationError = err?.message || String(err);
-        console.error(`Variant ${i + 1} image generation failed:`, err);
+        if (generationError === FREE_TIER_IMAGE_MESSAGE) {
+          markGeminiFreeTier();
+          console.info('Gemini key is on the free tier: AI visuals skipped, copy still uses Gemini.');
+        } else {
+          console.error(`Variant ${i + 1} image generation failed:`, err);
+        }
       }
     }
 
@@ -201,14 +209,15 @@ export async function generateCreativeVariants(
   return results;
 }
 
+export const FREE_TIER_IMAGE_MESSAGE =
+  'This Gemini key is on the free tier, which includes no image generation. Copy still runs on Gemini. For AI visuals, turn on billing for the key in Google AI Studio (Get API key → Set up billing), use OpenArt, or upload a photo.';
+
 // Newest first; older models are tried when a newer one is unavailable to this key.
 const IMAGE_MODELS = ['gemini-3.1-flash-image', 'gemini-2.5-flash-image'];
 
 /** Turns raw Gemini errors into something a marketer can act on. */
 export function friendlyGeminiError(raw: string): string {
-  if (/limit:\s*0/.test(raw) && /free_tier/i.test(raw)) {
-    return 'Your Gemini key is on the free tier, which includes no image generation. Turn on billing for this key in Google AI Studio (Get API key → Set up billing), or use OpenArt.';
-  }
+  if (/limit:\s*0/.test(raw) && /free_tier/i.test(raw)) return FREE_TIER_IMAGE_MESSAGE;
   if (/RESOURCE_EXHAUSTED|429/.test(raw)) {
     const wait = raw.match(/retry in ([\d.]+)s/i);
     return `Gemini rate limit reached${wait ? `, try again in ${Math.ceil(Number(wait[1]))}s` : ', try again in a minute'}.`;

@@ -22,7 +22,7 @@ import { PerformanceImport } from './components/PerformanceImport';
 import { LearningLibraryView } from './components/LearningLibraryView';
 import { McpPromptBridge } from './components/McpPromptBridge';
 import { FeedbackModal } from './components/FeedbackModal';
-import { getGeminiApiKey } from './utils/apiKey';
+import { GeminiKeyChip } from './components/GeminiKeyChip';
 import { Sparkles, Palette, FileText, Tag, Award, ClipboardList, Check, ArrowRight } from 'lucide-react';
 
 type StudioTab = 'brief' | 'canvas' | 'copy' | 'naming' | 'learning';
@@ -119,7 +119,6 @@ export const App: React.FC = () => {
   }, []);
 
   const activeCreative = creatives.find((c) => c.id === activeCreativeId) || creatives[0];
-  const hasGeminiKey = Boolean(getGeminiApiKey());
 
   // Fill the copy tab on first visit so it is never an empty screen.
   useEffect(() => {
@@ -244,15 +243,7 @@ export const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3 min-w-0">
-          <span
-            className={`hidden md:inline-flex flex-shrink-0 items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-semibold border ${
-              hasGeminiKey ? 'border-green-800 bg-green-950/60 text-green-300' : 'border-amber-800 bg-amber-950/60 text-amber-300'
-            }`}
-            title={hasGeminiKey ? 'AI visuals and copy run on Gemini' : 'Add GEMINI_API_KEY to .env.local (or run in Google AI Studio) for AI visuals and copy'}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${hasGeminiKey ? 'bg-green-400' : 'bg-amber-400'}`} />
-            {hasGeminiKey ? 'Gemini connected' : 'Gemini key missing'}
-          </span>
+          <GeminiKeyChip />
           <nav className="flex items-center gap-1 overflow-x-auto -mx-1 px-1" aria-label="Workflow steps">
             {STEPS.map((s, i) => {
               const active = activeTab === s.id;
