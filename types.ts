@@ -220,3 +220,90 @@ export interface GeneratedImage {
   base64: string;
   sourceTask: TaskType;
 }
+
+// ---------- v2 strategist workflow (Brainstorm → Test plan → Creatives → Launch pack → Learn) ----------
+
+export interface ChatMsg {
+  id: string;
+  role: 'user' | 'strategist';
+  text: string;
+  /** Reference ad screenshots attached to a user message (data URLs). */
+  images?: string[];
+  /** Web sources the strategist used when live search was on. */
+  sources?: { title: string; url: string }[];
+  createdAt: string;
+}
+
+export type AwarenessStage = 'unaware' | 'problem-aware' | 'solution-aware' | 'product-aware' | 'most-aware';
+export type PlacementFocus = 'faculty' | 'number' | 'product' | 'offer' | 'clinical-image' | 'situation';
+
+export interface AngleIdea {
+  id: string;
+  name: string;
+  /** Why it could work for this audience, in one or two sentences. */
+  insight: string;
+  persona: string;
+  awareness: AwarenessStage;
+  /** Persuasion lever or hook type, e.g. "Authority", "Time-specific hook". */
+  lever: string;
+  /** Copy framework it pairs with, e.g. "PAS", "BAB". */
+  framework: string;
+  hooks: string[];
+  /** Only approved claims for the course. */
+  proof: string[];
+  visualIdea: string;
+  placementFocus: PlacementFocus;
+  saturation: 'open' | 'moderate' | 'crowded';
+  risks: string[];
+  /** Closest finished-ad template family for the Creatives step. */
+  templateAngle: Angle;
+  starred: boolean;
+  source: 'strategist' | 'your-idea' | 'reference';
+}
+
+export interface PlanAdSet {
+  id: string;
+  name: string;
+  angleId: string;
+  angleName: string;
+  variable: string;
+  audience: string;
+  dailyBudget: number;
+  ads: { name: string; hook: string; format: string }[];
+}
+
+export interface TestPlan {
+  createdAt: string;
+  /** Angle ids the plan was built from; used to flag the plan as stale. */
+  basedOn: string[];
+  objective: string;
+  optimisationEvent: string;
+  campaignName: string;
+  budgetType: 'ABO' | 'CBO';
+  dailyBudget: number;
+  bidStrategy: string;
+  placements: string;
+  adSets: PlanAdSet[];
+  hypotheses: { angleName: string; hypothesis: string }[];
+  durationDays: number;
+  primaryKpi: string;
+  checkpoints: string[];
+  rules: { kill: string; iterate: string; scale: string; fatigue: string };
+  placementNotes: string[];
+  missingInfo: string[];
+  approved: boolean;
+}
+
+export interface StudioProject {
+  id: string;
+  name: string;
+  courseCode: string;
+  goal: 'SALES' | 'LEADS';
+  dailyBudget: number;
+  targetCpa: number;
+  chat: ChatMsg[];
+  angles: AngleIdea[];
+  plan?: TestPlan;
+  createdAt: string;
+  updatedAt: string;
+}

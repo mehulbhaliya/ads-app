@@ -206,7 +206,11 @@ export function buildDefaultContent(brief: CampaignBrief, template?: TemplateId)
     hook,
     hookAccent,
     courseTitle: houseStyle(title),
-    courseSubtitle: houseStyle(subtitle),
+    courseSubtitle: houseStyle(
+      /no standalone neet-ss|no .*neet-ss/i.test((course?.cautions || []).join(' '))
+        ? subtitle.replace(/\s*\+\s*Super[- ]?Speciality/i, '').replace(/\s*\(V[\d.]+\)/, '')
+        : subtitle
+    ),
     facultyName: lead?.name || '',
     facultyCredentials: houseStyle(lead?.credentials),
     facultyRole: houseStyle(lead?.designation || lead?.role),
@@ -217,7 +221,10 @@ export function buildDefaultContent(brief: CampaignBrief, template?: TemplateId)
     priceWas: struck,
     dateLine: course?.sessionDate ? `Live: ${course.sessionDate}` : '',
     cta: CTA_BY_TYPE[brief.type] || 'Enrol Now',
-    badge: BADGE_BY_SEGMENT[brief.segment] || '',
+    // Courses without a NEET-SS route (e.g. Ortho) must never carry the SS badge.
+    badge: /no standalone neet-ss|no .*neet-ss/i.test((course?.cautions || []).join(' '))
+      ? 'For MS / MD Residency'
+      : BADGE_BY_SEGMENT[brief.segment] || '',
   };
 }
 

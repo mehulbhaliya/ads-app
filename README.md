@@ -1,12 +1,14 @@
 # DigiNerve Ad Creative Studio
 
-Builds compliant Meta and Google ad creatives and copy for DigiNerve courses:
+Plans and builds Meta ad tests the way a senior performance marketer does. Each step waits for your approval, and nothing downstream regenerates on its own.
 
-1. **Brief:** course, audience, angle and offer.
-2. **Design & Export:** 3 finished ad variants in DigiNerve layouts, exported as a Meta set (4:5, 1:1, 9:16) or a Google set.
-3. **Meta Copy:** 5 fact-grounded concepts.
-4. **Names & UTMs:** naming-convention names, UTMs and a pre-launch checklist.
-5. **Learning Loop.**
+1. **Brainstorm:** a chat with the strategist. Give it an idea, a problem or a reference ad; it returns angle cards (insight, persona, awareness stage, lever, hooks, approved proof, competitor saturation, risks). Optional live competitor research. Star 2-4 angles.
+2. **Test plan:** campaign → ad sets (one angle each) → 2-3 hook ads, plus budget split, optimisation event, bidding, placements, hypotheses, KPIs and kill/iterate/scale rules. It flags thin budgets. Approve it.
+3. **Creatives:** generate 3 concepts per approved angle, edit, and export 4:5 / 1:1 / 9:16.
+4. **Launch pack:** copy for the approved creative, names, UTMs and a pre-launch checklist.
+5. **Learn:** import results; lessons feed the next round.
+
+Projects (one per course test) are saved in the browser, so you can come back to any step.
 
 ## Run in Google AI Studio
 
