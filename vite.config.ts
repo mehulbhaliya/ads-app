@@ -44,12 +44,13 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        allowedHosts: true,
       },
       plugins: [react(), saveExports()],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.OPENART_PROXY_URL': JSON.stringify(env.OPENART_PROXY_URL || '')
+        'process.env.API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || env.GEMINI_API_KEY || ''),
+        'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || env.GEMINI_API_KEY || ''),
+        'process.env.OPENART_PROXY_URL': JSON.stringify(process.env.OPENART_PROXY_URL || env.OPENART_PROXY_URL || '')
       },
       resolve: {
         alias: {

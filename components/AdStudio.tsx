@@ -36,6 +36,7 @@ interface AdStudioProps {
   content: AdContent;
   onChangeContent: (content: AdContent) => void;
   onChangeFacultyPhoto: (dataUrl: string | undefined) => void;
+  onChangeCreativeBase?: (dataUrl: string) => void;
   logoSrc?: string | null;
   onChangeLogo: (dataUrl: string | undefined) => void;
   onRegenerate: () => void;
@@ -94,6 +95,7 @@ export const AdStudio: React.FC<AdStudioProps> = ({
   content,
   onChangeContent,
   onChangeFacultyPhoto,
+  onChangeCreativeBase,
   logoSrc,
   onChangeLogo,
   onRegenerate,
@@ -293,6 +295,49 @@ export const AdStudio: React.FC<AdStudioProps> = ({
 
       {/* Editor column */}
       <div className="xl:col-span-5 min-w-0 space-y-4">
+        <Section icon={<ImageIcon className="w-4 h-4 text-dn-gold" />} title="Creative Visual Base">
+          <div className="flex items-center gap-3">
+            <img
+              src={creative.base64}
+              alt="Creative Visual Base"
+              className="w-16 h-16 rounded-lg object-cover border border-gray-700 bg-gray-950 flex-shrink-0"
+            />
+            <div className="flex-1 space-y-1.5 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white cursor-pointer flex items-center gap-1.5 transition">
+                  <Upload className="w-3.5 h-3.5 text-dn-gold" />
+                  <span>Upload & Replace Creative</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (f && onChangeCreativeBase) {
+                        onChangeCreativeBase(await readFile(f));
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={onRegenerate}
+                  disabled={isGenerating}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-800/80 hover:bg-gray-700 border border-gray-700 text-gray-300 flex items-center gap-1.5 transition disabled:opacity-50"
+                  title="Regenerate this visual base"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
+                  <span>Regenerate</span>
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-400">
+                Upload any creative, screenshot, ward photo, or banner. DigiNerve typography, logo, and badge layers will composite directly onto it.
+              </p>
+            </div>
+          </div>
+        </Section>
+
         <Section icon={<LayoutTemplate className="w-4 h-4 text-dn-gold" />} title="Layout">
           <div className="grid grid-cols-2 gap-2">
             {(Object.keys(TEMPLATE_META) as TemplateId[]).map((t) => {
