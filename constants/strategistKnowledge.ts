@@ -3,6 +3,7 @@
  * - NotebookLM expert playbook (Meta ads course, Hormozi, CRO - CXL), r7
  * - meta-ads-workspace playbook + meta-ads-ops / meta-ad-script-writer skills
  * - DigiNerve competitor audit (~95 designs, 25-Sep-2026)
+ * - Meta Ad Library 6-month scan (~790 ads, 16 advertisers, 26-Mar to 26-Sep-2026)
  * Keep in sync with constants/expertPlaybook.ts and the Cowork OS playbook docs.
  */
 import { HOOK_FORMULAS, OPEN_LANES, PLAYBOOK_VERSION } from './expertPlaybook';
@@ -46,19 +47,48 @@ export const COPY_FRAMEWORKS = {
   story: ['Pixar story spine', 'Hero\'s Journey', 'Sparkline (what is vs what could be)', 'Feel-Felt-Found'],
 };
 
-/** Competitor saturation, from the Sep-2026 audit. Used to tag angles crowded / open. */
+/** Competitor saturation, from the Sep-2026 audit + 6-month Meta Ad Library scan (~790 ads). Used to tag angles crowded / open. */
 export const COMPETITOR_LANDSCAPE = {
   crowded: [
-    'Feature lists with 6+ stats',
-    'Coupons and % off',
-    'Pass-rate and topper claims',
+    'Feature lists / 6-icon grids with stats (DocTutorials SS 59% of ads, DBMCI 45%)',
+    'Coupons and % off (only ever short 1-8 day bursts; no proven long-runner is a discount ad)',
+    'Pass-rate, AIR and topper claims (mostly unfootnoted: "90%", "100% success")',
     'Free topic booklets (DocTutorials runs ~22 designs, many Ortho/Peds/OBGYN topics)',
     'Countdown to exam date',
-    'Generic "busy doctor" (labour room, ward rounds)',
+    '"Missed NEET PG? UK / alternative pathway + stipend" (StudyMEDIC, SPIME, OC Academy, Texila)',
+    'Generic "busy doctor" for MRCOG (Bhawna Khera: every ad is 45 min/day, 70% less time)',
   ],
-  moderate: ['Named faculty credential strip', 'App screenshot / product demo', 'Version launch ("V2.0")', 'Free webinar with seat limit'],
-  open: OPEN_LANES,
+  moderate: [
+    'Named faculty credential strip',
+    'App screenshot / product demo',
+    'Version launch ("V2.0", Marrow Edition 8.5)',
+    'Free webinar or free 1:1 clarity call',
+    'Consolidation: "one plan, stop juggling resources" (PW 29 clones, DBMCI ONE Plan)',
+  ],
+  open: [
+    ...OPEN_LANES,
+    'Resident time pain named precisely ("Between OPD, duties & clinics", only one small SS player uses it)',
+    'Residency exam intent: clear your MD/MS theory, practical and viva (almost uncontested)',
+    '"You got the seat. Now make residency count." (positive identity, nobody runs it)',
+    'Behaviour pain ("read it three times, can it be recalled under pressure?", Cerebellum only)',
+    'Clinical reasoning ("every symptom has a story"), fits DxTx / OSCE content',
+    'Trust stack carousel (publisher heritage, textbook authors, numbers): Medvarsity ran one 193 days',
+    'Footnoted, verifiable proof (every competitor claim is unverified)',
+  ],
 };
+
+/** Long-running competitor ads (21+ days = likely profitable) and the mechanic behind each. */
+export const COMPETITOR_WINNERS = [
+  '193d Medvarsity: trust-stack carousel, every card a risk reducer (accreditation, 25 years, 5 lakh+ doctors)',
+  '128d OC Academy: named course director + concrete skill numbers ("150+ DICOMs")',
+  '65d StudyMEDIC: cost-fear comparison ("Before you commit crores to a private PG seat, watch this")',
+  '64d SPEED: resident time pain ("Between OPD, duties & clinics... when are you supposed to revise?")',
+  '57d PW MedEd: clinical story ("Every symptom has a story. Every diagnosis has a reason.")',
+  '54d DocTutorials: ONE tangible differentiator repeated (a workbook with every live class, 50 clones)',
+  '54d Cerebellum: science/behaviour pain ("You didn't forget it. You never stored it.")',
+  '36-38d DBMCI: situation pain carousel ("Internship schedules can be unpredictable. Your prep doesn't have to be.") and a system walked card by card',
+  'Styling that lasts: calm premium (white/lavender, one accent, named-expert card), real phone UI with a real question, carousel cover with question headline + "Swipe >>", lo-fi vertical faculty/testimonial video',
+];
 
 export const TESTING_RULES = {
   structure:
@@ -106,4 +136,5 @@ Hook types: ${HOOK_TYPES.join(' | ')}
 Hook formulas for busy doctors: ${HOOK_FORMULAS.join(' | ')}
 Copy frameworks: short ${COPY_FRAMEWORKS.short.join(', ')}; story ${COPY_FRAMEWORKS.story.join(', ')}
 Competitor landscape: CROWDED ${COMPETITOR_LANDSCAPE.crowded.join('; ')}. MODERATE ${COMPETITOR_LANDSCAPE.moderate.join('; ')}. OPEN LANES ${COMPETITOR_LANDSCAPE.open.join('; ')}.
+What competitors keep running (steal the mechanic, never the claim or wording): ${COMPETITOR_WINNERS.join(' | ')}. Prefer merging 3-4 of these mechanics with a DigiNerve-only asset (textbook author, printed book/notes, footnoted proof, V2.0).
 Compliance: ${COMPLIANCE_RULES.join(' ')}`;
