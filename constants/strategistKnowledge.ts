@@ -85,8 +85,8 @@ export const COMPETITOR_WINNERS = [
   '64d SPEED: resident time pain ("Between OPD, duties & clinics... when are you supposed to revise?")',
   '57d PW MedEd: clinical story ("Every symptom has a story. Every diagnosis has a reason.")',
   '54d DocTutorials: ONE tangible differentiator repeated (a workbook with every live class, 50 clones)',
-  '54d Cerebellum: science/behaviour pain ("You didn't forget it. You never stored it.")',
-  '36-38d DBMCI: situation pain carousel ("Internship schedules can be unpredictable. Your prep doesn't have to be.") and a system walked card by card',
+  "54d Cerebellum: science/behaviour pain (\"You didn't forget it. You never stored it.\")",
+  "36-38d DBMCI: situation pain carousel (\"Internship schedules can be unpredictable. Your prep doesn't have to be.\") and a system walked card by card",
   'Styling that lasts: calm premium (white/lavender, one accent, named-expert card), real phone UI with a real question, carousel cover with question headline + "Swipe >>", lo-fi vertical faculty/testimonial video',
 ];
 
