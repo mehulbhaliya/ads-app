@@ -5,7 +5,23 @@ Lets the Ad Creative Studio generate images with OpenArt. Browsers can't call
 calls. Each person signs in with their own OpenArt account; tokens are stored
 encrypted in their browser, not on the server.
 
-## Deploy to Cloud Run (one time)
+## Run on your PC (free, default)
+
+The app's default proxy URL is `http://localhost:8080`, so the AI Studio copy of
+the app works on any PC running this server:
+
+1. Install Node.js 20+.
+2. Put `index.mjs` in a folder with a `config.env`:
+   ```
+   SESSION_SECRET=<64 random hex chars>
+   ALLOWED_ORIGINS=https://*.usercontent.goog,https://aistudio.google.com,http://localhost:3000
+   PORT=8080
+   HOST=127.0.0.1
+   ```
+3. Start it with `node --env-file=config.env index.mjs` and keep the window open.
+   Chrome may ask to let the app access your local network: click Allow.
+
+## Deploy to Cloud Run (optional, for teammates on other PCs)
 
 ```bash
 gcloud run deploy openart-proxy --source server --region asia-south1 --allow-unauthenticated \

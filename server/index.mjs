@@ -23,6 +23,7 @@
  *                    https://*.usercontent.goog (every AI Studio account's app copy).
  *   PUBLIC_URL       optional, this server's public https URL (else derived from request)
  *   PORT             optional, default 8080
+ *   HOST             optional; set 127.0.0.1 when running on a PC so only that PC can reach it
  */
 import http from 'node:http';
 import crypto from 'node:crypto';
@@ -287,6 +288,8 @@ function corsHeaders(req) {
     'Access-Control-Allow-Headers': 'Content-Type, X-OpenArt-Session',
     'Access-Control-Expose-Headers': 'X-OpenArt-Session-Update',
     'Access-Control-Max-Age': '600',
+    // Chrome's local-network check: lets an https app page reach this proxy on localhost.
+    'Access-Control-Allow-Private-Network': 'true',
     Vary: 'Origin',
   };
 }
@@ -432,4 +435,4 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => console.log(`OpenArt proxy listening on :${PORT} (origins: ${ALLOWED_ORIGINS.join(', ')})`));
+server.listen(PORT, process.env.HOST || undefined, () => console.log(`OpenArt proxy listening on :${PORT} (origins: ${ALLOWED_ORIGINS.join(', ')})`));

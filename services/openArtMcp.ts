@@ -31,8 +31,9 @@ function defaultProxyUrl(): string {
     configured = '';
   }
   if (configured) return configured;
-  // Running on this PC: the proxy in /server listens on :8080.
-  return typeof location !== 'undefined' && location.hostname === 'localhost' ? 'http://localhost:8080' : '';
+  // Default: the proxy running on this PC (server/, started from the "Start OpenArt server"
+  // desktop shortcut). Works from AI Studio too, since an https page may call http://localhost.
+  return 'http://localhost:8080';
 }
 
 export function loadOpenArtConfig(): OpenArtConfig {
@@ -120,7 +121,11 @@ async function proxyFetch(
       headers: { ...(init.headers || {}), 'X-OpenArt-Session': config.session },
     });
   } catch (err: any) {
-    throw new Error(`Cannot reach the OpenArt proxy at ${config.proxyUrl}: ${err.message || 'network error'}`);
+    const local = /localhost|127\.0\.0\.1/.test(config.proxyUrl);
+    throw new Error(
+      `Cannot reach the OpenArt proxy at ${config.proxyUrl}: ${err.message || 'network error'}` +
+        (local ? '. Start it with the "Start OpenArt server" shortcut on your desktop, then try again.' : '')
+    );
   }
   const updated = res.headers.get('X-OpenArt-Session-Update');
   if (updated) onSessionUpdate(updated);
