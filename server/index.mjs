@@ -18,7 +18,9 @@
  *
  * Env:
  *   SESSION_SECRET   required, long random string (encrypts session blobs)
- *   ALLOWED_ORIGINS  required, comma-separated app origins allowed to use this proxy
+ *   ALLOWED_ORIGINS  required, comma-separated app origins allowed to use this proxy.
+ *                    A leading "*." in the host matches any subdomain, e.g.
+ *                    https://*.usercontent.goog (every AI Studio account's app copy).
  *   PUBLIC_URL       optional, this server's public https URL (else derived from request)
  *   PORT             optional, default 8080
  */
@@ -31,6 +33,21 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map((s) => s.trim().replace(/\/$/, ''))
   .filter(Boolean);
+
+// "https://*.example.com" matches https://a.example.com and https://a.b.example.com,
+// never the bare domain or another scheme. Each user still signs in with their
+// own OpenArt account, so a wildcard can't spend anyone else's credits.
+const ORIGIN_MATCHERS = ALLOWED_ORIGINS.map((o) => {
+  const m = o.match(/^(https?):\/\/\*\.(.+)$/);
+  if (!m) return (origin) => origin === o;
+  const scheme = `${m[1]}://`;
+  const suffix = `.${m[2]}`;
+  return (origin) =>
+    origin.startsWith(scheme) &&
+    origin.endsWith(suffix) &&
+    /^[a-z0-9.-]+$/i.test(origin.slice(scheme.length, -suffix.length) || '!');
+});
+const isAllowedOrigin = (origin) => ORIGIN_MATCHERS.some((match) => match(origin));
 
 const MCP_URL = 'https://mcp.openart.ai/mcp';
 const OAUTH = {
@@ -263,7 +280,7 @@ async function toDataUrl(url) {
 // ---------- HTTP plumbing ----------
 function corsHeaders(req) {
   const origin = (req.headers.origin || '').replace(/\/$/, '');
-  if (!ALLOWED_ORIGINS.includes(origin)) return {};
+  if (!isAllowedOrigin(origin)) return {};
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -307,7 +324,7 @@ const server = http.createServer(async (req, res) => {
     // 1. Start OAuth in a popup opened by the app.
     if (url.pathname === '/auth/start' && req.method === 'GET') {
       const origin = (url.searchParams.get('origin') || '').replace(/\/$/, '');
-      if (!ALLOWED_ORIGINS.includes(origin)) return send(res, 403, `<p>Origin not allowed: ${escapeHtml(origin)}</p>`);
+      if (!isAllowedOrigin(origin)) return send(res, 403, `<p>Origin not allowed: ${escapeHtml(origin)}</p>`);
       const redirectUri = `${publicUrl(req)}/auth/callback`;
       const clientId = await getClientId(redirectUri);
       const verifier = crypto.randomBytes(32).toString('base64url');
