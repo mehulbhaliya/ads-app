@@ -36,7 +36,29 @@ function defaultProxyUrl(): string {
   return 'http://localhost:8080';
 }
 
+/** Picks up a session handed back in the URL fragment (same-tab login fallback) and clears it. */
+function takeSessionFromHash(): string | undefined {
+  if (typeof location === 'undefined') return undefined;
+  const m = location.hash.match(/openart-session=([^&]+)/);
+  if (!m) return undefined;
+  try {
+    history.replaceState(null, '', location.pathname + location.search);
+  } catch {
+    /* ignore */
+  }
+  return decodeURIComponent(m[1]);
+}
+
 export function loadOpenArtConfig(): OpenArtConfig {
+  const fromHash = takeSessionFromHash();
+  if (fromHash) {
+    const current = loadStoredConfig();
+    saveOpenArtConfig({ ...current, session: fromHash });
+  }
+  return loadStoredConfig();
+}
+
+function loadStoredConfig(): OpenArtConfig {
   const defaults: OpenArtConfig = { proxyUrl: defaultProxyUrl(), model: 'nano-banana-2' };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);

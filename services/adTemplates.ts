@@ -116,7 +116,7 @@ function drawLogo(ctx: Ctx, logo: LogoAssets | null | undefined, x: number, y: n
   ctx.fillStyle = dark ? C.white : C.navy;
   ctx.fillText('digi', x, y);
   const dw = ctx.measureText('digi').width;
-  ctx.fillStyle = C.gold;
+  ctx.fillStyle = dark ? C.white : C.gold; // full white on dark, never white + gold
   ctx.fillText('nerve', x + dw, y);
   ctx.font = font(500, size * 0.36, FONTS.body);
   ctx.fillStyle = dark ? C.white : C.navy;
@@ -439,10 +439,13 @@ function facultyHero(ctx: Ctx, f: Frame, c: AdContent, a: TemplateAssets) {
 
   const blocks: Block[] = [];
   let stackTop = top;
+  let logoBottom = 0;
   if (!story) {
-    // Logo stays pinned at the top; only the text below it may be re-centred.
+    // Logo pinned top-right (house rule); the text column starts below the logo band.
     const lw = W * (land ? 0.2 : 0.27);
-    stackTop = top + drawLogo(ctx, a.logo, colX, top, lw, true) + 34 * u;
+    const lh = drawLogo(ctx, a.logo, W - pad - lw, top, lw, true);
+    logoBottom = top + lh;
+    stackTop = top + lh + 34 * u;
   }
   blocks.push({ ...hookBlock(ctx, c, colX, colW, (land ? 58 : 100) * u, land ? 4 : 5, C.white, C.gold), gapAfter: 18 });
   blocks.push({ ...barBlock(ctx, colX, W * 0.2, 7 * u, C.gold), gapAfter: 28 });
@@ -483,9 +486,11 @@ function facultyHero(ctx: Ctx, f: Frame, c: AdContent, a: TemplateAssets) {
   layoutStack(blocks, stackTop, bottom - stackTop, u, story ? 'center' : 'auto');
 
   if (story) {
-    drawLogo(ctx, a.logo, pad, f.safeTop - 10 * u, W * 0.3, true);
+    const lw = W * 0.3;
+    logoBottom = f.safeTop - 10 * u + drawLogo(ctx, a.logo, W - pad - lw, f.safeTop - 10 * u, lw, true);
   }
-  if (c.offer) drawOfferBadge(ctx, c.offer, W - pad, story ? f.safeTop : pad, (land ? 26 : 38) * u);
+  // Offer badge sits under the logo so the two never collide.
+  if (c.offer) drawOfferBadge(ctx, c.offer, W - pad, logoBottom + 18 * u, (land ? 26 : 38) * u);
 }
 
 function datePillBlock(ctx: Ctx, text: string, x: number, maxW: number, size: number): Block {
@@ -551,7 +556,7 @@ function productLight(ctx: Ctx, f: Frame, c: AdContent, a: TemplateAssets) {
   const cardW = story ? W * 0.38 : W * 0.34;
   const cardH = cardW * 1.12;
   const cardX = W - pad - cardW;
-  const cardY = story ? f.safeTop + 40 * u : H * 0.12;
+  const cardY = story ? f.safeTop + 40 * u : H * 0.16; // below the top-right logo
   if (showCard) {
     withShadow(ctx, 24, 8, 'rgba(22,52,94,0.25)', () => fillRound(ctx, cardX - 8 * u, cardY - 8 * u, cardW + 16 * u, cardH + 16 * u, 34 * u, C.white));
     ctx.save();
@@ -568,7 +573,7 @@ function productLight(ctx: Ctx, f: Frame, c: AdContent, a: TemplateAssets) {
 
   const blocks: Block[] = [];
   const logoW = (land ? 0.2 : 0.3) * W;
-  blocks.push({ measure: (s) => (logoW * s) / (a.logo?.aspect || 2.8), draw: (y, s) => drawLogo(ctx, a.logo, colX, y, logoW * s, false), gapAfter: 14 });
+  blocks.push({ measure: (s) => (logoW * s) / (a.logo?.aspect || 2.8), draw: (y, s) => drawLogo(ctx, a.logo, W - pad - logoW * s, y, logoW * s, false), gapAfter: 14 });
   if (c.badge) blocks.push({ ...pillBlock(ctx, c.badge, colX, colW, 24 * u, C.navy, C.white, C.white), gapAfter: 34 });
   blocks.push({
     ...textBlock(ctx, c.courseTitle, colX, colW, { family: FONTS.display, weight: 400, size: (land ? 64 : 118) * u, color: C.navyDeep, maxLines: 2, uppercase: true, lineHeight: 1.0 }),
@@ -619,8 +624,9 @@ function hookFullbleed(ctx: Ctx, f: Frame, c: AdContent, a: TemplateAssets) {
     ctx.fillRect(0, start, W, H - start);
   }
 
-  drawLogo(ctx, a.logo, pad, f.safeTop, W * (land ? 0.18 : 0.28), true);
-  if (c.offer) drawOfferBadge(ctx, c.offer, W - pad, f.safeTop, (land ? 24 : 38) * u);
+  const fbLogoW = W * (land ? 0.18 : 0.28);
+  const fbLogoH = drawLogo(ctx, a.logo, W - pad - fbLogoW, f.safeTop, fbLogoW, true);
+  if (c.offer) drawOfferBadge(ctx, c.offer, W - pad, f.safeTop + fbLogoH + 18 * u, (land ? 24 : 38) * u);
 
   const ctaH = (land ? 64 : 108) * u;
   const colW = land ? W * 0.55 : W - 2 * pad;
@@ -662,7 +668,7 @@ function offerStack(ctx: Ctx, f: Frame, c: AdContent, a: TemplateAssets) {
   const circ = story
     ? { cx: W * 0.5, cy: H * 0.57, r: W * 0.19 }
     : land
-    ? { cx: W * 0.82, cy: H * 0.5, r: H * 0.36 }
+    ? { cx: W * 0.82, cy: H * 0.57, r: H * 0.36 } // lowered to clear the top-right logo
     : { cx: W * 0.8, cy: H * (f.ratio === '1:1' ? 0.5 : 0.52), r: W * 0.17 };
   ctx.beginPath();
   ctx.arc(circ.cx, circ.cy, circ.r + 12 * u, 0, Math.PI * 2);
@@ -687,7 +693,7 @@ function offerStack(ctx: Ctx, f: Frame, c: AdContent, a: TemplateAssets) {
   const bottom = story ? circ.cy - circ.r - 40 * u : ctaY - 30 * u;
 
   const blocks: Block[] = [];
-  blocks.push({ measure: (s) => (W * (land ? 0.18 : 0.27) * s) / (a.logo?.aspect || 2.8), draw: (y, s) => drawLogo(ctx, a.logo, colX, y, W * (land ? 0.18 : 0.27) * s, true), gapAfter: 36 });
+  blocks.push({ measure: (s) => (W * (land ? 0.18 : 0.27) * s) / (a.logo?.aspect || 2.8), draw: (y, s) => drawLogo(ctx, a.logo, W - pad - W * (land ? 0.18 : 0.27) * s, y, W * (land ? 0.18 : 0.27) * s, true), gapAfter: 36 });
   if (c.offer) {
     blocks.push({
       measure: (s) => (land ? 44 : 64) * u * s * 1.7,

@@ -15,7 +15,7 @@ import { BUSINESS_CONTEXT, STRATEGIST_ROLE, TESTING_RULES, PLACEMENT_GUIDE } fro
 import { ANGLE_TEST_ORDER } from '../constants/expertPlaybook';
 import { confirmedFaculty } from './adContent';
 
-const TEXT_MODELS = ['gemini-flash-latest', 'gemini-3.1-flash-lite'];
+const TEXT_MODELS = ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
 const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 
 /** Facts the strategist may use for one course. */
@@ -41,14 +41,27 @@ ANGLES SO FAR:
 ${angles}`;
 }
 
+const isBusyError = (msg: string) => /429|RESOURCE_EXHAUSTED|503|UNAVAILABLE|overloaded|high demand|500|INTERNAL/i.test(msg);
+
+/** Tries each text model; if all are busy (503/429), waits and goes round again (3 rounds max). */
 async function callText(ai: GoogleGenAI, contents: any, config: any) {
   let lastErr: any = null;
-  for (const model of TEXT_MODELS) {
-    try {
-      return await ai.models.generateContent({ model, contents, config });
-    } catch (e) {
-      lastErr = e;
+  const waits = [0, 3000, 8000];
+  for (const wait of waits) {
+    if (wait) await new Promise((r) => setTimeout(r, wait));
+    for (const model of TEXT_MODELS) {
+      try {
+        return await ai.models.generateContent({ model, contents, config });
+      } catch (e: any) {
+        lastErr = e;
+        if (!isBusyError(String(e?.message || e))) break;
+      }
     }
+    if (lastErr && !isBusyError(String(lastErr?.message || lastErr))) break;
+  }
+  const msg = String(lastErr?.message || lastErr || 'unknown error');
+  if (isBusyError(msg)) {
+    throw new Error('Gemini is busy right now (high demand or free-tier limit). Wait a minute and send again.');
   }
   throw lastErr;
 }

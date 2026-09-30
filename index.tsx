@@ -3,6 +3,10 @@ import './fetchPolyfill';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { loadOpenArtConfig } from './services/openArtMcp';
+
+// Save an OpenArt session handed back in the URL (same-tab login) before the app renders.
+loadOpenArtConfig();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

@@ -140,8 +140,8 @@ export function extractLogo(img: HTMLImageElement, keepBadge = false): LogoAsset
         let fr = (r - (1 - a) * 255) / a;
         let fg = (g - (1 - a) * 255) / a;
         let fb = (b - (1 - a) * 255) / a;
-        if (toWhite && fb > fr + 20) {
-          // Navy/blue ink -> white; gold (r > b) stays gold.
+        if (toWhite) {
+          // Brand rule: on dark layouts the logo is FULL white (never white + gold).
           fr = fg = fb = 255;
         }
         out.data[di] = Math.max(0, Math.min(255, fr));

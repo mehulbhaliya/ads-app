@@ -370,8 +370,14 @@ const server = http.createServer(async (req, res) => {
         `<!doctype html><meta charset="utf-8"><title>OpenArt connected</title>
 <p style="font-family:sans-serif">OpenArt connected. You can close this window.</p>
 <script>
-  if (window.opener) window.opener.postMessage(${payload}, ${JSON.stringify(state.origin)});
-  setTimeout(() => window.close(), 800);
+  if (window.opener) {
+    window.opener.postMessage(${payload}, ${JSON.stringify(state.origin)});
+    setTimeout(() => window.close(), 800);
+  } else {
+    // Login opened in the same tab (some embedded browsers): return to the app and pass
+    // the encrypted session in the URL fragment, which never leaves the browser.
+    location.replace(${JSON.stringify(state.origin)} + '/#openart-session=' + encodeURIComponent(${JSON.stringify(blob)}));
+  }
 </script>`
       );
     }
