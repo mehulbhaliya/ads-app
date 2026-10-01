@@ -4,6 +4,7 @@
  * - meta-ads-workspace playbook + meta-ads-ops / meta-ad-script-writer skills
  * - DigiNerve competitor audit (~95 designs, 25-Sep-2026)
  * - Meta Ad Library 6-month scan (~790 ads, 16 advertisers, 26-Mar to 26-Sep-2026)
+ * - Knowledge refresh: active-ad scan, India (~140 relevant ads, 01-Oct-2026)
  * Keep in sync with constants/expertPlaybook.ts and the Cowork OS playbook docs.
  */
 import { HOOK_FORMULAS, OPEN_LANES, PLAYBOOK_VERSION } from './expertPlaybook';
@@ -51,24 +52,26 @@ export const COPY_FRAMEWORKS = {
 export const COMPETITOR_LANDSCAPE = {
   crowded: [
     'Feature lists / 6-icon grids with stats (DocTutorials SS 59% of ads, DBMCI 45%)',
-    'Coupons and % off (only ever short 1-8 day bursts; no proven long-runner is a discount ad)',
+    'Coupons and % off (only ever short 1-8 day bursts; no proven long-runner is a discount ad). Late-Sep 2026 wave of 45-60% off (DocTutorials, PrepLadder, Med Exam Expert) plus coupon-code headlines (Marrow, Cerebellum)',
     'Pass-rate, AIR and topper claims (mostly unfootnoted: "90%", "100% success")',
     'Free topic booklets (DocTutorials runs ~22 designs, many Ortho/Peds/OBGYN topics)',
     'Countdown to exam date',
     '"Missed NEET PG? UK / alternative pathway + stipend" (StudyMEDIC, SPIME, OC Academy, Texila)',
     'Generic "busy doctor" for MRCOG (Bhawna Khera: every ad is 45 min/day, 70% less time)',
+    'Consolidation: "one plan, stop juggling resources" (PW 29 clones, DBMCI ONE Plan, DocTutorials "one plan" MBBS+PG, Bhawna Khera Part 1 + Part 2 together)',
   ],
   moderate: [
-    'Named faculty credential strip',
+    'Named faculty credential strip (Study MRCOG now leads with a faculty headcount of RCOG-certified specialists)',
     'App screenshot / product demo',
     'Version launch ("V2.0", Marrow Edition 8.5)',
     'Free webinar or free 1:1 clarity call',
-    'Consolidation: "one plan, stop juggling resources" (PW 29 clones, DBMCI ONE Plan)',
+    'Month-by-month roadmap / revision laps (Cerebellum dated plan blocks + "3 revision laps", DBMCI "roadmap" headlines)',
+    'Career upgrade via fellowship or hospital-brand training (StudyMEDIC ~30 city × hospital clones, DocTutorials Fellowship across 5+ specialties, MIME ortho fellowships)',
   ],
   open: [
     ...OPEN_LANES,
     'Resident time pain named precisely ("Between OPD, duties & clinics", only one small SS player uses it)',
-    'Residency exam intent: clear your MD/MS theory, practical and viva (almost uncontested)',
+    'Residency exam intent: clear your MD/MS theory, practical and viva (almost uncontested; only Mentorexam lists DNB theory / solved papers, and DocTutorials Residency has entered with generic "expert guidance", so move first)',
     '"You got the seat. Now make residency count." (positive identity, nobody runs it)',
     'Behaviour pain ("read it three times, can it be recalled under pressure?", Cerebellum only)',
     'Clinical reasoning ("every symptom has a story"), fits DxTx / OSCE content',

@@ -8,7 +8,7 @@
  */
 import type { AdContent } from '../services/adContent';
 
-export const PLAYBOOK_VERSION = '2026-09-26 r7';
+export const PLAYBOOK_VERSION = '2026-10-01 r8';
 
 /**
  * Angle test order for cold, risk-averse doctors. r7: exam urgency is for
@@ -41,6 +41,7 @@ export const HOOK_FORMULAS = [
   '[Real clinical image]. Your consultant will ask you this. Would you get it?',
   'You don\'t need [more videos]. You need [the specific thing].',
   'No batch dates. No missed live classes. Recorded, self-paced, yours on any rotation.',
+  '[Topic X] of [Y], and the rotation just changed. [How the course picks up exactly where the last lecture stopped].',
 ];
 
 /** Injected into the copy prompt. */
